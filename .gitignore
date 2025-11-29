@@ -1,0 +1,38 @@
+target/
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+release.properties
+*.log
+logs/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# IDEs / Editors
+.idea/
+*.iml
+.vscode/
+*.swp
+*~
+
+# IntelliJ / NetBeans / Eclipse
+*.ipr
+*.iws
+.nb-configuration.xml
+.classpath
+.project
+.settings/
+
+# Build output & temporary files
+out/
+bin/
+
+# Spring Boot dev tools
+.spring-boot-devtools.properties
+
+# Backup files
+*.bak
+*.orig
