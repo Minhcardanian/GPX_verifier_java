@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Attempt Verifier Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        :root {
+            --bg: #0f172a;
+            --bg-alt: #020617;
+            --card: #111827;
+            --accent: #38bdf8;
+            --accent-soft: rgba(56, 189, 248, 0.1);
+            --danger: #f97373;
+            --text: #e5e7eb;
+            --muted: #9ca3af;
+            --border: #1f2933;
+            --success: #4ade80;
+            --warning: #facc15;
+            --flagged: #f97316;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: radial-gradient(circle at top left, #1f2937 0, #020617 45%, #020617 100%);
+            color: var(--text);
+        }
+
+        .page {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 24px 16px 40px;
+        }
+
+        header {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.9rem;
+            letter-spacing: 0.03em;
+        }
+
+        header p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.96rem;
+        }
+
+        .tagline {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(56, 189, 248, 0.08);
+            color: var(--accent);
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .tagline-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: #22c55e;
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.35);
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr);
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+
+        .card {
+            background: linear-gradient(145deg, #020617, #020617 35%, #020617 100%);
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            padding: 18px 18px 16px;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 12px;
+        }
+
+        .card-header h2 {
+            margin: 0;
+            font-size: 1.05rem;
+        }
+
+        .card-header span {
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 10px;
+        }
+
+        label {
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
+        input[type="text"],
+        input[type="file"] {
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #020617;
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+
+        input[type="file"] {
+            padding: 6px 8px;
+        }
+
+        input[type="text"]:focus,
+        input[type="file"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.6);
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        button {
+            border-radius: 999px;
+            border: none;
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #34d399);
+            color: #0b1220;
+        }
+
+        .btn-secondary {
+            background: rgba(15, 23, 42, 0.9);
+            color: var(--muted);
+            border: 1px solid var(--border);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: progress;
+        }
+
+        .status {
+            margin-top: 8px;
+            font-size: 0.8rem;
+            min-height: 1.2em;
+        }
+
+        .status.ok {
+            color: var(--success);
+        }
+
+        .status.error {
+            color: var(--danger);
+        }
+
+        .metrics-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed var(--border);
+        }
+
+        .metric-pill {
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid var(--border);
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        .metric-pill strong {
+            color: var(--text);
+        }
+
+        .metric-pill span {
+            color: var(--accent);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            margin-top: 6px;
+        }
+
+        thead {
+            background: rgba(15, 23, 42, 0.95);
+        }
+
+        th, td {
+            padding: 7px 6px;
+            border-bottom: 1px solid #111827;
+            text-align: left;
+        }
+
+        th {
+            font-weight: 500;
+            color: var(--muted);
+            position: sticky;
+            top: 0;
+            background: rgba(15, 23, 42, 0.98);
+            z-index: 1;
+        }
+
+        tbody tr:nth-child(even) {
+            background: rgba(15, 23, 42, 0.75);
+        }
+
+        tbody tr:nth-child(odd) {
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        tbody tr:hover {
+            background: rgba(56, 189, 248, 0.08);
+        }
+
+        .result-badge {
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .result-badge span {
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+        }
+
+        .result-verified {
+            background: rgba(74, 222, 128, 0.12);
+            color: var(--success);
+        }
+
+        .result-verified span {
+            background: var(--success);
+        }
+
+        .result-flagged {
+            background: rgba(249, 115, 22, 0.12);
+            color: var(--flagged);
+        }
+
+        .result-flagged span {
+            background: var(--flagged);
+        }
+
+        .result-rejected {
+            background: rgba(239, 68, 68, 0.12);
+            color: var(--danger);
+        }
+
+        .result-rejected span {
+            background: var(--danger);
+        }
+
+        .message-cell {
+            max-width: 260px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--muted);
+        }
+
+        .empty-state {
+            padding: 20px 12px 4px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+
+        .badge-small {
+            font-size: 0.72rem;
+            padding: 2px 6px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header>
+        <div class="tagline">
+            <div class="tagline-dot"></div>
+            <span>Attempt Verifier · Java Spring Boot</span>
+        </div>
+        <h1>Trail GPX Attempt Verifier</h1>
+        <p>
+            Upload a GPX track for a runner and compare it against the official route.
+            Distance, elevation, coverage and deviation are computed and stored in MySQL.
+        </p>
+    </header>
+
+    <main>
+        <!-- Left: Upload form -->
+        <section class="card">
+            <div class="card-header">
+                <h2>New Attempt</h2>
+                <span>Upload runner GPX track</span>
+            </div>
+
+            <form id="uploadForm">
+                <div class="field">
+                    <label for="runnerId">Runner ID</label>
+                    <input id="runnerId" name="runnerId" type="text" placeholder="e.g. runner-123" required>
+                </div>
+
+                <div class="field">
+                    <label for="gpxFile">GPX file</label>
+                    <input id="gpxFile" name="file" type="file" accept=".gpx" required>
+                </div>
+
+                <div class="btn-row">
+                    <button type="submit" class="btn-primary" id="uploadBtn">
+                        <span>⬆</span>
+                        <span>Upload &amp; Verify</span>
+                    </button>
+                    <button type="button" class="btn-secondary" id="refreshBtn">
+                        ⟳ Refresh attempts
+                    </button>
+                </div>
+
+                <div class="status" id="statusMessage"></div>
+
+                <div class="metrics-row" id="lastAttemptMetrics" style="display:none;">
+                    <div class="metric-pill">
+                        Distance: <strong><span id="m-distance">0</span> km</strong>
+                    </div>
+                    <div class="metric-pill">
+                        Elevation gain: <strong><span id="m-elev">0</span> m</strong>
+                    </div>
+                    <div class="metric-pill">
+                        Coverage: <strong><span id="m-coverage">0%</span></strong>
+                    </div>
+                    <div class="metric-pill">
+                        Max deviation: <strong><span id="m-dev">0 m</span></strong>
+                    </div>
+                    <div class="metric-pill">
+                        Score: <strong><span id="m-score">0</span></strong>
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <!-- Right: Attempts table -->
+        <section class="card">
+            <div class="card-header">
+                <h2>Attempts Log</h2>
+                <span id="attemptCount" class="badge-small">0 attempts</span>
+            </div>
+
+            <div style="max-height: 360px; overflow: auto; border-radius: 12px; border: 1px solid #0b1120;">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Runner</th>
+                        <th>Time</th>
+                        <th>Dist (km)</th>
+                        <th>Gain (m)</th>
+                        <th>Coverage</th>
+                        <th>Max dev (m)</th>
+                        <th>Score</th>
+                        <th>Result</th>
+                        <th>Message</th>
+                    </tr>
+                    </thead>
+                    <tbody id="attemptsBody">
+                    <!-- JS will inject rows -->
+                    </tbody>
+                </table>
+
+                <div class="empty-state" id="emptyState" style="display:none;">
+                    No attempts yet. Upload a GPX file to verify a runner&apos;s attempt.
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    const uploadForm = document.getElementById('uploadForm');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const statusMessage = document.getElementById('statusMessage');
+    const attemptsBody = document.getElementById('attemptsBody');
+    const attemptCount = document.getElementById('attemptCount');
+    const emptyState = document.getElementById('emptyState');
+    const lastMetrics = document.getElementById('lastAttemptMetrics');
+
+    const mDistance = document.getElementById('m-distance');
+    const mElev = document.getElementById('m-elev');
+    const mCoverage = document.getElementById('m-coverage');
+    const mDev = document.getElementById('m-dev');
+    const mScore = document.getElementById('m-score');
+
+    function setStatus(text, type) {
+        statusMessage.textContent = text || '';
+        statusMessage.className = 'status' + (type ? ' ' + type : '');
+    }
+
+    function formatResultBadge(result) {
+        const r = (result || '').toUpperCase();
+        let cls = 'result-badge ';
+        if (r === 'VERIFIED') cls += 'result-verified';
+        else if (r === 'FLAGGED') cls += 'result-flagged';
+        else cls += 'result-rejected';
+
+        const label = r || 'UNKNOWN';
+        return `<span class="${cls}"><span></span>${label}</span>`;
+    }
+
+    function formatInstant(iso) {
+        if (!iso) return '';
+        try {
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return iso;
+            return d.toLocaleString();
+        } catch {
+            return iso;
+        }
+    }
+
+    function formatNumber(value, decimals) {
+        if (value === null || value === undefined) return '';
+        return Number(value).toFixed(decimals);
+    }
+
+    function renderAttempts(attempts) {
+        attemptsBody.innerHTML = '';
+
+        if (!attempts || attempts.length === 0) {
+            emptyState.style.display = 'block';
+            attemptCount.textContent = '0 attempts';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        attemptCount.textContent = attempts.length + (attempts.length === 1 ? ' attempt' : ' attempts');
+
+        const rows = attempts.map(a => {
+            const coveragePct = a.coverageRatio != null ? (a.coverageRatio * 100) : null;
+            const maxDev = a.maxDeviationM;
+
+            return `
+                <tr>
+                    <td>${a.id ?? ''}</td>
+                    <td>${a.runnerId ?? ''}</td>
+                    <td>${formatInstant(a.attemptTime)}</td>
+                    <td>${formatNumber(a.distanceKm, 3)}</td>
+                    <td>${formatNumber(a.elevationGainM, 1)}</td>
+                    <td>${coveragePct != null ? formatNumber(coveragePct, 1) + '%' : ''}</td>
+                    <td>${maxDev != null ? formatNumber(maxDev, 1) : ''}</td>
+                    <td>${formatNumber(a.difficultyScore, 2)}</td>
+                    <td>${formatResultBadge(a.result)}</td>
+                    <td class="message-cell" title="${a.message ?? ''}">
+                        ${a.message ?? ''}
+                    </td>
+                </tr>
+            `;
+        });
+
+        attemptsBody.innerHTML = rows.join('');
+    }
+
+    async function loadAttempts() {
+        try {
+            const res = await fetch('/api/attempts');
+            if (!res.ok) {
+                throw new Error('Failed to load attempts: ' + res.status);
+            }
+            const data = await res.json();
+            renderAttempts(data);
+        } catch (err) {
+            console.error(err);
+            setStatus('Failed to load attempts list.', 'error');
+        }
+    }
+
+    function showLastMetrics(attempt) {
+        if (!attempt) {
+            lastMetrics.style.display = 'none';
+            return;
+        }
+
+        mDistance.textContent = formatNumber(attempt.distanceKm, 3);
+        mElev.textContent = formatNumber(attempt.elevationGainM, 1);
+
+        if (attempt.coverageRatio != null) {
+            mCoverage.textContent = formatNumber(attempt.coverageRatio * 100, 1) + '%';
+        } else {
+            mCoverage.textContent = '–';
+        }
+
+        if (attempt.maxDeviationM != null) {
+            mDev.textContent = formatNumber(attempt.maxDeviationM, 1) + ' m';
+        } else {
+            mDev.textContent = '–';
+        }
+
+        mScore.textContent = formatNumber(attempt.difficultyScore, 2);
+
+        lastMetrics.style.display = 'flex';
+    }
+
+    uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const runnerId = document.getElementById('runnerId').value.trim();
+        const fileInput = document.getElementById('gpxFile');
+
+        if (!runnerId) {
+            setStatus('Runner ID is required.', 'error');
+            return;
+        }
+        if (!fileInput.files || fileInput.files.length === 0) {
+            setStatus('Please select a GPX file.', 'error');
+            return;
+        }
+
+        const file = fileInput.files[0];
+
+        const formData = new FormData();
+        formData.append('runnerId', runnerId);
+        formData.append('file', file);
+
+        uploadBtn.disabled = true;
+        refreshBtn.disabled = true;
+        setStatus('Uploading and verifying...', 'ok');
+
+        try {
+            const res = await fetch('/api/attempts/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error('Upload failed: ' + res.status + ' ' + text);
+            }
+
+            const attempt = await res.json();
+            setStatus(`Attempt stored: result = ${attempt.result}`, 'ok');
+
+            showLastMetrics(attempt);
+            await loadAttempts();
+
+        } catch (err) {
+            console.error(err);
+            setStatus('Error verifying attempt: ' + err.message, 'error');
+        } finally {
+            uploadBtn.disabled = false;
+            refreshBtn.disabled = false;
+        }
+    });
+
+    refreshBtn.addEventListener('click', async () => {
+        setStatus('Refreshing attempts...', '');
+        await loadAttempts();
+        setStatus('', '');
+    });
+
+    // Initial load
+    (async function init() {
+        await loadAttempts();
+    })();
+</script>
+</body>
+</html>
