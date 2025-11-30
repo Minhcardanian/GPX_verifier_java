@@ -8,7 +8,6 @@ import org.springframework.stereotype.Repository;
 import org.trail.attemptverifier.model.Attempt;
 
 import java.sql.*;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,11 +39,13 @@ public class AttemptRepository {
             attempt.setResult(rs.getString("result"));
             attempt.setMessage(rs.getString("message"));
 
-            // NEW: load optional metrics
-            Double cov = rs.getObject("coverage_ratio", Double.class);
-            Double dev = rs.getObject("max_deviation_m", Double.class);
-            attempt.setCoverageRatio(cov);
-            attempt.setMaxDeviationM(dev);
+            // NEW: load route similarity metrics
+            attempt.setCoverageRatio(rs.getObject("coverage_ratio", Double.class));
+            attempt.setMaxDeviationM(rs.getObject("max_deviation_m", Double.class));
+
+            // NEW: load raw GPX blob
+            byte[] gpxBytes = rs.getBytes("gpx_data");
+            attempt.setGpxData(gpxBytes != null ? gpxBytes : null);
 
             return attempt;
         }
@@ -54,31 +55,35 @@ public class AttemptRepository {
     // INSERT Attempt
     // ------------------------------------------------------------
     public Attempt save(Attempt attempt) {
+
         String sql = """
             INSERT INTO attempts
-              (runner_id, timestamp, distance_km, elevation_gain_m,
-               difficulty_score, result, message,
-               coverage_ratio, max_deviation_m)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (runner_id, timestamp, distance_km, elevation_gain_m,
+             difficulty_score, result, message,
+             coverage_ratio, max_deviation_m, gpx_data)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
         jdbcTemplate.update(connection -> {
-            PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            PreparedStatement ps =
+                    connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+
             ps.setString(1, attempt.getRunnerId());
+
             ps.setTimestamp(2,
                     attempt.getAttemptTime() != null
                             ? Timestamp.valueOf(attempt.getAttemptTime())
-                            : null
-            );
+                            : null);
+
             ps.setDouble(3, attempt.getDistanceKm());
             ps.setDouble(4, attempt.getElevationGainM());
             ps.setDouble(5, attempt.getDifficultyScore());
             ps.setString(6, attempt.getResult());
             ps.setString(7, attempt.getMessage());
 
-            // NEW: write coverage + deviation if present
+            // coverage + deviation
             if (attempt.getCoverageRatio() != null)
                 ps.setDouble(8, attempt.getCoverageRatio());
             else
@@ -88,6 +93,12 @@ public class AttemptRepository {
                 ps.setDouble(9, attempt.getMaxDeviationM());
             else
                 ps.setNull(9, Types.DOUBLE);
+
+            // NEW: GPX bytes
+            if (attempt.getGpxData() != null)
+                ps.setBytes(10, attempt.getGpxData());
+            else
+                ps.setNull(10, Types.BLOB);
 
             return ps;
         }, keyHolder);
@@ -115,7 +126,7 @@ public class AttemptRepository {
     }
 
     // ------------------------------------------------------------
-    // NEW FILTER QUERIES
+    // FILTERS
     // ------------------------------------------------------------
     public List<Attempt> findByRunnerId(String runnerId) {
         String sql = """

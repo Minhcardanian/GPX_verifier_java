@@ -18,10 +18,10 @@ import java.util.List;
 
 /**
  * Core business logic for verifying runner GPX attempts.
- * Demonstrates:
- *  - Encapsulation (service owns strategy components)
- *  - Polymorphism (difficulty/coverage via interfaces)
- *  - MVC layering and separation of concerns
+ * Demonstrates clean OOP:
+ *  - Encapsulation (service owns verification pipeline)
+ *  - Polymorphism (DifficultyModel & CoverageCalculator interfaces)
+ *  - Separation of concerns (parser, metrics, scoring, classification)
  */
 @Service
 public class AttemptVerifierService {
@@ -30,11 +30,10 @@ public class AttemptVerifierService {
     private final GpxParser gpxParser;
     private final RouteService routeService;
 
-    // OOP strategy instances (polymorphism shown)
+    // OOP strategy implementations
     private final DifficultyModel difficultyModel = new DefaultDifficultyModel();
     private final CoverageCalculator coverageCalculator = new DefaultCoverageCalculator();
 
-    // Route coverage tolerance threshold
     private static final double COVERAGE_TOLERANCE_M = 30.0;
 
     public AttemptVerifierService(AttemptRepository attemptRepository,
@@ -47,18 +46,18 @@ public class AttemptVerifierService {
     }
 
     /**
-     * Main verification pipeline:
-     * 1. Parse GPX file → TrackPoint list
-     * 2. Load official route track
-     * 3. Compute metrics (distance, elevation, coverage, deviation)
-     * 4. Score difficulty
-     * 5. Classify (VERIFIED / FLAGGED / REJECTED)
-     * 6. Persist Attempt into DB
+     * Verification pipeline:
+     * 1) Parse GPX
+     * 2) Load official route
+     * 3) Compute metrics
+     * 4) Score attempt
+     * 5) Classify
+     * 6) Persist to DB (including raw GPX bytes)
      */
     public Attempt verifyAttempt(MultipartFile gpxFile, String runnerId) throws IOException {
 
         // ---------------------------------------
-        // Step 1 — Parse GPX
+        // Step 1 — Parse runner GPX
         // ---------------------------------------
         List<TrackPoint> attemptTrack;
         try {
@@ -73,16 +72,15 @@ public class AttemptVerifierService {
         }
 
         // ---------------------------------------
-        // Step 2 — Load official route
+        // Step 2 — Load official route track
         // ---------------------------------------
-        List<TrackPoint> route = routeService.getTrackPoints();   // FIXED: correct method name
-
+        List<TrackPoint> route = routeService.getTrackPoints();
         if (route == null || route.isEmpty()) {
             return buildRejectedAttempt(runnerId, "Official route not available.");
         }
 
         // ---------------------------------------
-        // Step 3 — Compute metrics using your existing API
+        // Step 3 — Compute metrics using existing TrackMetrics API
         // ---------------------------------------
         double distanceKm = TrackMetrics.computeTotalDistanceKm(attemptTrack);
         double elevationGainM = TrackMetrics.computeElevationGainM(attemptTrack);
@@ -93,10 +91,13 @@ public class AttemptVerifierService {
                 COVERAGE_TOLERANCE_M
         );
 
-        double maxDeviationM = TrackMetrics.computeMaxDeviationMeters(attemptTrack, route);
+        double maxDeviationM = TrackMetrics.computeMaxDeviationMeters(
+                attemptTrack,
+                route
+        );
 
         // ---------------------------------------
-        // Step 4 — OOP-based difficulty score
+        // Step 4 — Difficulty scoring via polymorphic model
         // ---------------------------------------
         double difficultyScore = difficultyModel.computeScore(
                 distanceKm,
@@ -106,7 +107,7 @@ public class AttemptVerifierService {
         );
 
         // ---------------------------------------
-        // Step 5 — Classification logic
+        // Step 5 — Result classification
         // ---------------------------------------
         String result;
         if (coverageRatio < 0.50 || Double.isNaN(maxDeviationM)) {
@@ -118,7 +119,7 @@ public class AttemptVerifierService {
         }
 
         // ---------------------------------------
-        // Step 6 — Build and persist Attempt
+        // Step 6 — Build and persist Attempt (with GPX blob)
         // ---------------------------------------
         Attempt attempt = new Attempt();
         attempt.setRunnerId(runnerId);
@@ -130,12 +131,13 @@ public class AttemptVerifierService {
         attempt.setMaxDeviationM(maxDeviationM);
         attempt.setResult(result);
         attempt.setMessage("Verification completed using OOP strategy classes.");
+        attempt.setGpxData(gpxFile.getBytes());   // IMPORTANT: persist GPX blob
 
         return attemptRepository.save(attempt);
     }
 
     /**
-     * Helper for standardizing rejected attempts.
+     * Standardized rejection builder.
      */
     private Attempt buildRejectedAttempt(String runnerId, String message) {
         Attempt attempt = new Attempt();
@@ -148,6 +150,7 @@ public class AttemptVerifierService {
         attempt.setMaxDeviationM(null);
         attempt.setResult("REJECTED");
         attempt.setMessage(message);
+        attempt.setGpxData(null);
         return attemptRepository.save(attempt);
     }
 }

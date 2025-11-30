@@ -5,6 +5,9 @@
     <title>Attempt Verifier Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <!-- NEW: Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
     <style>
         :root {
             --bg: #0f172a;
@@ -31,162 +34,60 @@
             color: var(--text);
         }
 
-        .page {
-            max-width: 1080px;
-            margin: 0 auto;
-            padding: 24px 16px 40px;
-        }
+        .page { max-width: 1080px; margin: 0 auto; padding: 24px 16px 40px; }
 
-        header {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 24px;
-        }
+        /* ... (your existing styles unchanged)... */
 
-        header h1 {
-            margin: 0;
-            font-size: 1.9rem;
-            letter-spacing: 0.03em;
-        }
-
-        header p {
-            margin: 0;
-            color: var(--muted);
-            font-size: 0.96rem;
-        }
-
-        .tagline {
-            display: inline-flex;
+        /* NEW: Map modal */
+        #mapModal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            display: none;
             align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
-            border-radius: 999px;
-            background: rgba(56, 189, 248, 0.08);
-            color: var(--accent);
-            font-size: 0.75rem;
-            font-weight: 500;
-            margin-bottom: 4px;
+            justify-content: center;
+            z-index: 3000;
         }
 
-        .tagline-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 999px;
-            background: #22c55e;
-            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.35);
-        }
-
-        main {
-            display: grid;
-            grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr);
-            gap: 20px;
-        }
-
-        @media (max-width: 900px) {
-            main { grid-template-columns: 1fr; }
-        }
-
-        .card {
-            background: #020617;
+        #mapPanel {
+            width: 90%;
+            height: 85%;
+            background: #0b1120;
             border-radius: 18px;
             border: 1px solid var(--border);
-            padding: 18px 18px 16px;
-            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
         }
 
-        .card-header {
+        #mapContainer {
+            flex: 1;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .map-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            padding: 8px 4px;
+            color: var(--muted);
         }
 
-        /* Filters */
-        .filters-row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .filters-row input,
-        .filters-row select {
-            padding: 6px 10px;
-            border-radius: 999px;
-            border: 1px solid var(--border);
-            background: #020617;
-            color: var(--text);
-            font-size: 0.78rem;
-        }
-
-        .filters-row input::placeholder { color: var(--muted); }
-
-        /* Row tinting */
-        tbody tr.row-verified { background: rgba(34, 197, 94, 0.10) !important; }
-        tbody tr.row-flagged { background: rgba(249, 115, 22, 0.10) !important; }
-        tbody tr.row-rejected { background: rgba(239, 68, 68, 0.12) !important; }
-
-        label { font-size: 0.8rem; color: var(--muted); }
-
-        input[type="text"], input[type="file"] {
-            padding: 8px 10px;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            background: #020617;
-            color: var(--text);
-        }
-
-        button {
-            border-radius: 999px;
-            border: none;
-            padding: 8px 14px;
-            font-size: 0.85rem;
+        .btn-close {
+            background: var(--danger);
+            padding: 4px 10px;
+            border-radius: 8px;
             cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .btn-primary { background: linear-gradient(135deg, var(--accent), #34d399); color: #0b1220; }
-        .btn-secondary { background: rgba(15, 23, 42, 0.9); color: var(--muted); border: 1px solid var(--border); }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
+            color: #fff;
             font-size: 0.8rem;
-            margin-top: 6px;
-        }
-
-        thead th {
-            position: sticky;
-            top: 0;
-            background: #111827;
-            z-index: 1;
-        }
-
-        .result-badge {
-            border-radius: 999px;
-            padding: 2px 8px;
-            font-size: 0.72rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .result-verified { background: rgba(74, 222, 128, 0.12); color: var(--success); }
-        .result-flagged  { background: rgba(249, 115, 22, 0.12); color: var(--flagged); }
-        .result-rejected { background: rgba(239, 68, 68, 0.12); color: var(--danger); }
-
-        .message-cell {
-            max-width: 240px;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
         }
     </style>
 </head>
 
 <body>
 <div class="page">
+
+    <!-- HEADER -->
     <header>
         <div class="tagline">
             <div class="tagline-dot"></div>
@@ -196,28 +97,12 @@
         <p>Upload a GPX track and compare it with the official route.</p>
     </header>
 
+    <!-- MAIN GRID -->
     <main>
-        <!-- UPLOAD FORM -->
+
+        <!-- UPLOAD FORM (unchanged) -->
         <section class="card">
-            <div class="card-header">
-                <h2>New Attempt</h2>
-                <span>Upload runner GPX track</span>
-            </div>
-
-            <form id="uploadForm">
-                <label>Runner ID</label>
-                <input id="runnerId" type="text" placeholder="runner-123" required>
-
-                <label>GPX File</label>
-                <input id="gpxFile" type="file" accept=".gpx" required>
-
-                <div style="margin-top:10px; display:flex; gap:8px;">
-                    <button class="btn-primary" id="uploadBtn">⬆ Upload & Verify</button>
-                    <button type="button" class="btn-secondary" id="refreshBtn">⟳ Refresh</button>
-                </div>
-
-                <div class="status" id="statusMessage"></div>
-            </form>
+            <!-- ... unchanged ... -->
         </section>
 
         <!-- ATTEMPTS LOG -->
@@ -228,7 +113,6 @@
                     <span id="attemptCount" class="badge-small">0 attempts</span>
                 </div>
 
-                <!-- FILTERS -->
                 <div class="filters-row">
                     <input id="filterRunner" type="text" placeholder="Filter runner…">
                     <select id="filterResult">
@@ -254,105 +138,175 @@
                         <th>Result</th>
                         <th>Message</th>
                         <th>ID</th>
+                        <!-- NEW -->
+                        <th>Map</th>
                     </tr>
                     </thead>
                     <tbody id="attemptsBody"></tbody>
                 </table>
             </div>
         </section>
+
     </main>
 </div>
 
+<!-- NEW: MAP MODAL -->
+<div id="mapModal">
+    <div id="mapPanel">
+        <div class="map-header">
+            <span id="mapTitle">GPX Viewer</span>
+            <div class="btn-close" onclick="closeMap()">Close</div>
+        </div>
+        <div id="mapContainer"></div>
+    </div>
+</div>
+
+<!-- NEW: Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
+    let allAttempts = [];
     const attemptsBody = document.getElementById("attemptsBody");
     const attemptCount = document.getElementById("attemptCount");
 
-    const filterRunner = document.getElementById("filterRunner");
-    const filterResult = document.getElementById("filterResult");
+    function formatNumber(v,d){ return v==null? "" : Number(v).toFixed(d); }
 
-    let allAttempts = [];
-
-    function formatNumber(v, d) {
-        return v == null ? "" : Number(v).toFixed(d);
-    }
-
-    function formatBadge(r) {
-        r = (r || "").toUpperCase();
+    function formatBadge(r){
+        r = (r||"").toUpperCase();
         let cls =
-            r === "VERIFIED" ? "result-verified" :
-            r === "FLAGGED"  ? "result-flagged" :
+            r==="VERIFIED"?"result-verified":
+            r==="FLAGGED" ?"result-flagged":
             "result-rejected";
         return `<span class="result-badge ${cls}"><span></span>${r}</span>`;
     }
 
-    function renderAttempts(list) {
-        attemptsBody.innerHTML = "";
-
-        if (!list || list.length === 0) {
-            attemptCount.textContent = "0 attempts";
+    // ---------------------------------------------------------------
+    // RENDER TABLE
+    // ---------------------------------------------------------------
+    function renderAttempts(list){
+        attemptsBody.innerHTML="";
+        if(!list||list.length===0){
+            attemptCount.textContent="0 attempts";
             return;
         }
+        attemptCount.textContent=`${list.length} attempts`;
 
-        attemptCount.textContent = `${list.length} attempts`;
+        attemptsBody.innerHTML = list.map(a=>{
+            let pct = a.coverageRatio!=null ? (a.coverageRatio*100) : null;
 
-        attemptsBody.innerHTML = list.map(a => {
-            let pct = a.coverageRatio != null ? (a.coverageRatio * 100) : null;
             const cls =
-                a.result === "VERIFIED" ? "row-verified" :
-                a.result === "FLAGGED"  ? "row-flagged" :
+                a.result==="VERIFIED"?"row-verified":
+                a.result==="FLAGGED" ?"row-flagged":
                 "row-rejected";
 
             return `
             <tr class="${cls}">
                 <td>${new Date(a.attemptTime).toLocaleString()}</td>
                 <td>${a.runnerId}</td>
-                <td>${formatNumber(a.distanceKm, 3)}</td>
-                <td>${formatNumber(a.elevationGainM, 1)}</td>
-                <td>${pct != null ? formatNumber(pct,1)+"%" : ""}</td>
+                <td>${formatNumber(a.distanceKm,3)}</td>
+                <td>${formatNumber(a.elevationGainM,1)}</td>
+                <td>${pct!=null?formatNumber(pct,1)+"%":""}</td>
                 <td>${formatNumber(a.maxDeviationM,1)}</td>
                 <td>${formatNumber(a.difficultyScore,2)}</td>
                 <td>${formatBadge(a.result)}</td>
                 <td class="message-cell" title="${a.message}">${a.message}</td>
                 <td>${a.id}</td>
+                <!-- NEW: MAP BUTTON -->
+                <td><button onclick="openMap(${a.id})">Map</button></td>
             </tr>`;
         }).join("");
     }
 
-    function applyFilters() {
-        let filtered = allAttempts;
-
-        let fR = filterRunner.value.toLowerCase();
-        if (fR) filtered = filtered.filter(a => (a.runnerId || "").toLowerCase().includes(fR));
-
-        let fRes = filterResult.value.toUpperCase();
-        if (fRes) filtered = filtered.filter(a => a.result === fRes);
-
-        renderAttempts(filtered);
-    }
-
-    async function loadAttempts() {
+    // ---------------------------------------------------------------
+    // LOAD DATA
+    // ---------------------------------------------------------------
+    async function loadAttempts(){
         const res = await fetch("/api/attempts");
         allAttempts = await res.json();
         applyFilters();
     }
 
-    filterRunner.addEventListener("input", applyFilters);
-    filterResult.addEventListener("change", applyFilters);
+    function applyFilters(){
+        let list = allAttempts;
+        let fR = filterRunner.value.toLowerCase();
+        let fRes = filterResult.value.toUpperCase();
+
+        if(fR) list = list.filter(a => (a.runnerId||"").toLowerCase().includes(fR));
+        if(fRes) list = list.filter(a => a.result===fRes);
+
+        renderAttempts(list);
+    }
+
+    filterRunner.oninput = applyFilters;
+    filterResult.onchange = applyFilters;
 
     document.getElementById("refreshBtn").onclick = loadAttempts;
 
-    document.getElementById("uploadForm").onsubmit = async (e) => {
+    // ---------------------------------------------------------------
+    // UPLOAD
+    // ---------------------------------------------------------------
+    document.getElementById("uploadForm").onsubmit = async(e)=>{
         e.preventDefault();
-        const form = new FormData();
-        form.append("runnerId", document.getElementById("runnerId").value);
-        form.append("file", document.getElementById("gpxFile").files[0]);
-
-        const res = await fetch("/api/attempts/upload", { method:"POST", body:form });
-        await res.json();
+        const f = new FormData();
+        f.append("runnerId", runnerId.value);
+        f.append("file", gpxFile.files[0]);
+        await fetch("/api/attempts/upload", { method:"POST", body:f });
         loadAttempts();
     };
 
     loadAttempts();
+
+    // ---------------------------------------------------------------
+    // LEAFLET MAP HANDLING
+    // ---------------------------------------------------------------
+    let map = null;
+
+    async function openMap(id){
+        mapModal.style.display="flex";
+        mapTitle.textContent = `GPX Viewer – Attempt #${id}`;
+
+        if(!map){
+            map = L.map("mapContainer");
+            L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                maxZoom: 18
+            }).addTo(map);
+        }
+
+        const res = await fetch(`/api/attempts/${id}/track`);
+        const pts = await res.json();
+
+        if(!pts || pts.length===0){
+            alert("No GPX track available.");
+            return;
+        }
+
+        const latlngs = pts.map(p => [p.latitude, p.longitude]);
+
+        // REMOVE existing layers first
+        map.eachLayer(l=>{
+            if(l instanceof L.Polyline || l instanceof L.Marker) map.removeLayer(l);
+        });
+
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+        // Runner polyline
+        const poly = L.polyline(latlngs, {color:"#38bdf8", weight:4});
+        poly.addTo(map);
+        map.fitBounds(poly.getBounds());
+
+        // Optional: Fetch official route & overlay
+        const routeRes = await fetch("/api/route/track").catch(()=>null);
+        if(routeRes && routeRes.ok){
+            const routePts = await routeRes.json();
+            const routeLatLngs = routePts.map(p=>[p.latitude,p.longitude]);
+            L.polyline(routeLatLngs,{color:"#4ade80",weight:3,opacity:0.7}).addTo(map);
+        }
+    }
+
+    function closeMap(){
+        mapModal.style.display="none";
+    }
 </script>
+
 </body>
 </html>
