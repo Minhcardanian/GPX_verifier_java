@@ -1,26 +1,36 @@
 package org.trail.attemptverifier.service.oop;
 
-public class DefaultDifficultyModel extends DifficultyModel {
+/**
+ * Default concrete implementation of DifficultyModel.
+ *
+ * OOP:
+ *  - Implements the DifficultyModel interface (polymorphism)
+ *  - Encapsulates our current heuristic for scoring attempts
+ */
+public class DefaultDifficultyModel implements DifficultyModel {
 
     @Override
-    public double computeScore(double distanceKm,
-                               double elevationGainM,
-                               double coverageRatio,
-                               double maxDeviationM) {
+    public double computeScore(
+            double distanceKm,
+            double elevationGainM,
+            double coverageRatio,
+            double maxDeviationM
+    ) {
+        // Base load: distance + scaled elevation
+        double base = distanceKm + (elevationGainM / 100.0);
 
-        double base = distanceKm * 1.2 + elevationGainM * 0.002;
+        // Reward better coverage
+        double coverageBonus = coverageRatio * 10.0;
 
-        double penalty = 0;
-
-        if (coverageRatio < 1.0) {
-            penalty += (1.0 - coverageRatio) * 15;
+        // Penalty for leaving the route
+        double deviationPenalty;
+        if (Double.isNaN(maxDeviationM)) {
+            deviationPenalty = 10.0; // worst case if we couldn't compute deviation
+        } else {
+            deviationPenalty = Math.min(maxDeviationM / 50.0, 10.0);
         }
 
-        if (maxDeviationM > 20) {
-            penalty += (maxDeviationM - 20) * 0.05;
-        }
-
-        double score = base - penalty;
-        return clamp(score, 0, 100);
+        double score = base + coverageBonus - deviationPenalty;
+        return Math.max(score, 0.0);
     }
 }

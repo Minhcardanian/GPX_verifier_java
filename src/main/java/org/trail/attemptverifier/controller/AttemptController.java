@@ -1,6 +1,5 @@
 package org.trail.attemptverifier.controller;
 
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -10,15 +9,14 @@ import org.trail.attemptverifier.model.Attempt;
 import org.trail.attemptverifier.model.TrackPoint;
 import org.trail.attemptverifier.repository.AttemptRepository;
 import org.trail.attemptverifier.service.AttemptVerifierService;
-import org.trail.attemptverifier.util.GpxParser;
 
-import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * REST API for attempt verification, querying, and GPX retrieval.
- * Adds endpoints for map visualization (Leaflet-friendly).
+ * REST API for attempt verification & querying.
+ * Clean layering:
+ *   Controller → Service → Repository (OOP, encapsulation)
  */
 @RestController
 @RequestMapping("/api/attempts")
@@ -26,14 +24,11 @@ public class AttemptController {
 
     private final AttemptVerifierService attemptVerifierService;
     private final AttemptRepository attemptRepository;
-    private final GpxParser gpxParser;
 
     public AttemptController(AttemptVerifierService attemptVerifierService,
-                             AttemptRepository attemptRepository,
-                             GpxParser gpxParser) {
+                             AttemptRepository attemptRepository) {
         this.attemptVerifierService = attemptVerifierService;
         this.attemptRepository = attemptRepository;
-        this.gpxParser = gpxParser;
     }
 
     // ------------------------------------------------------------
@@ -73,6 +68,7 @@ public class AttemptController {
             @RequestParam(value = "runner", required = false) String runnerId,
             @RequestParam(value = "result", required = false) String result
     ) {
+
         boolean filterRunner = runnerId != null && !runnerId.isBlank();
         boolean filterResult = result != null && !result.isBlank();
 
@@ -80,16 +76,13 @@ public class AttemptController {
 
         if (!filterRunner && !filterResult) {
             list = attemptRepository.findAll();
-
         } else if (filterRunner && filterResult) {
             list = attemptRepository.findByRunnerIdAndResult(
                     runnerId.trim(),
                     result.trim().toUpperCase()
             );
-
         } else if (filterRunner) {
             list = attemptRepository.findByRunnerId(runnerId.trim());
-
         } else {
             list = attemptRepository.findByResult(result.trim().toUpperCase());
         }
@@ -113,52 +106,18 @@ public class AttemptController {
     }
 
     // ------------------------------------------------------------
-    // NEW ENDPOINT:
-    // GET raw GPX for map viewer
-    // ------------------------------------------------------------
-    @GetMapping(value = "/{id}/gpx", produces = "application/gpx+xml")
-    public ResponseEntity<?> getGpxRaw(@PathVariable("id") Long id) {
-        Optional<Attempt> found = attemptRepository.findById(id);
-
-        if (found.isEmpty() || found.get().getGpxData() == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse("No GPX available for attempt " + id));
-        }
-
-        byte[] gpx = found.get().getGpxData();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.parseMediaType("application/gpx+xml"));
-        headers.setContentLength(gpx.length);
-        headers.set("Content-Disposition", "inline; filename=attempt-" + id + ".gpx");
-
-        return new ResponseEntity<>(gpx, headers, HttpStatus.OK);
-    }
-
-    // ------------------------------------------------------------
-    // NEW ENDPOINT:
-    // GET parsed track as JSON (lat/lon/elev/time)
-    // For Leaflet polylines
+    // GET /api/attempts/{id}/track
+    // Returns parsed TrackPoint list for mapping.
     // ------------------------------------------------------------
     @GetMapping(value = "/{id}/track", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> getParsedTrack(@PathVariable("id") Long id) {
-
-        Optional<Attempt> found = attemptRepository.findById(id);
-
-        if (found.isEmpty() || found.get().getGpxData() == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse("No GPX available for attempt " + id));
-        }
-
-        byte[] gpx = found.get().getGpxData();
-
-        List<TrackPoint> points = gpxParser.parse(new ByteArrayInputStream(gpx));
-
-        return ResponseEntity.ok(points);
+    public ResponseEntity<List<TrackPoint>> getAttemptTrack(@PathVariable("id") Long id) {
+        List<TrackPoint> pts = attemptVerifierService.loadAttemptTrack(id);
+        // Always 200; UI can decide how to handle empty list
+        return ResponseEntity.ok(pts);
     }
 
     // ------------------------------------------------------------
-    // Error DTO
+    // Simple error DTO (OOP encapsulation)
     // ------------------------------------------------------------
     public static class ErrorResponse {
         private final String error;

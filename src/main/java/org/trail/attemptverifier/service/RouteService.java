@@ -1,106 +1,80 @@
-package org.trail.attemptverifier.service;
+package org.trail.attemptverifier.model;
 
-import org.springframework.stereotype.Service;
-import org.trail.attemptverifier.model.Route;
-import org.trail.attemptverifier.model.TrackPoint;
-import org.trail.attemptverifier.util.GpxParser;
-import org.trail.attemptverifier.util.TrackMetrics;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Collections;
-import java.util.List;
+import java.time.LocalDateTime;
 
 /**
- * Loads and exposes the official route used for verification.
- *
- * Responsibilities:
- *  - Load GPX route from classpath
- *  - Parse into TrackPoint list
- *  - Precompute metrics (distance, elevation)
- *  - Provide clean accessors for services
- *
- * Demonstrates OOP:
- *  - Encapsulation (route stored privately)
- *  - Abstraction (services use getRouteTrack(), not GPX logic)
- *  - Extensibility (future multiple routes or inheritance via Route subclasses)
+ * Simple domain model for an attempt.
+ * Persistence is handled manually in AttemptRepository (JdbcTemplate),
+ * so we do NOT need JPA annotations here.
  */
-@Service
-public class RouteService {
+public class Attempt {
 
-    private final Route route;
-    private final TrackMetrics routeMetrics;
+    private Long id;
+    private String runnerId;
+    private LocalDateTime attemptTime;
+    private double distanceKm;
+    private double elevationGainM;
+    private double difficultyScore;
+    private String result;
+    private String message;
 
-    public RouteService(GpxParser gpxParser) {
-        Route loadedRoute = null;
-        TrackMetrics metrics = null;
+    // Calculated metrics (persisted)
+    private Double coverageRatio;
+    private Double maxDeviationM;
 
-        try (InputStream in = getClass()
-                .getClassLoader()
-                .getResourceAsStream("gpx/route_official.gpx")) {
+    // Raw GPX data (LONGBLOB in DB)
+    private byte[] gpxData;
 
-            if (in == null) {
-                System.err.println("[RouteService] ERROR: Missing resource gpx/route_official.gpx");
-            } else {
-                try {
-                    List<TrackPoint> points = gpxParser.parse(in);
+    // Optional flags for API/UI only (not persisted yet)
+    private boolean officialRouteUsed;
+    private String debugInfo;
 
-                    if (points == null || points.isEmpty()) {
-                        System.err.println("[RouteService] WARNING: Route GPX parsed but contains no points.");
-                    } else {
-                        loadedRoute = new Route("Official Test Route", points);
-
-                        metrics = TrackMetrics.fromTracks(
-                                points,
-                                null,          // route = null because this is the route itself
-                                0.0            // tolerance not needed
-                        );
-
-                        System.out.println("[RouteService] Loaded route: "
-                                + points.size() + " points, "
-                                + metrics.getDistanceKm() + " km, "
-                                + metrics.getElevationGainM() + " m gain.");
-                    }
-
-                } catch (Exception e) {
-                    System.err.println("[RouteService] GPX parse EXCEPTION: " + e.getMessage());
-                }
-            }
-
-        } catch (IOException e) {
-            System.err.println("[RouteService] IO error loading GPX: " + e.getMessage());
-        }
-
-        this.route = loadedRoute;
-        this.routeMetrics = metrics;
+    public Attempt() {
     }
 
-    // -----------------------
-    // Public API
-    // -----------------------
-
-    /** Full route metadata object */
-    public Route getRoute() {
-        return route;
+    public Attempt(String runnerId) {
+        this.runnerId = runnerId;
+        this.attemptTime = LocalDateTime.now();
     }
 
-    /** Returns raw TrackPoint list */
-    public List<TrackPoint> getRouteTrack() {
-        return (route != null) ? route.getTrackPoints() : Collections.emptyList();
-    }
+    // ------------- Getters & Setters -------------
 
-    /** Route distance in km */
-    public double getRouteDistanceKm() {
-        return (routeMetrics != null) ? routeMetrics.getDistanceKm() : 0.0;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    /** Route total ascent */
-    public double getRouteElevationGainM() {
-        return (routeMetrics != null) ? routeMetrics.getElevationGainM() : 0.0;
-    }
+    public String getRunnerId() { return runnerId; }
+    public void setRunnerId(String runnerId) { this.runnerId = runnerId; }
 
-    /** Access all precomputed metrics */
-    public TrackMetrics getRouteMetrics() {
-        return routeMetrics;
-    }
+    public LocalDateTime getAttemptTime() { return attemptTime; }
+    public void setAttemptTime(LocalDateTime attemptTime) { this.attemptTime = attemptTime; }
+
+    public double getDistanceKm() { return distanceKm; }
+    public void setDistanceKm(double distanceKm) { this.distanceKm = distanceKm; }
+
+    public double getElevationGainM() { return elevationGainM; }
+    public void setElevationGainM(double elevationGainM) { this.elevationGainM = elevationGainM; }
+
+    public double getDifficultyScore() { return difficultyScore; }
+    public void setDifficultyScore(double difficultyScore) { this.difficultyScore = difficultyScore; }
+
+    public String getResult() { return result; }
+    public void setResult(String result) { this.result = result; }
+
+    public String getMessage() { return message; }
+    public void setMessage(String message) { this.message = message; }
+
+    public Double getCoverageRatio() { return coverageRatio; }
+    public void setCoverageRatio(Double coverageRatio) { this.coverageRatio = coverageRatio; }
+
+    public Double getMaxDeviationM() { return maxDeviationM; }
+    public void setMaxDeviationM(Double maxDeviationM) { this.maxDeviationM = maxDeviationM; }
+
+    public byte[] getGpxData() { return gpxData; }
+    public void setGpxData(byte[] gpxData) { this.gpxData = gpxData; }
+
+    public boolean isOfficialRouteUsed() { return officialRouteUsed; }
+    public void setOfficialRouteUsed(boolean officialRouteUsed) { this.officialRouteUsed = officialRouteUsed; }
+
+    public String getDebugInfo() { return debugInfo; }
+    public void setDebugInfo(String debugInfo) { this.debugInfo = debugInfo; }
 }

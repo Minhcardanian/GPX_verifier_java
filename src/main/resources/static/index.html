@@ -5,8 +5,11 @@
     <title>Attempt Verifier Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- NEW: Leaflet CSS -->
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         :root {
@@ -36,9 +39,186 @@
 
         .page { max-width: 1080px; margin: 0 auto; padding: 24px 16px 40px; }
 
-        /* ... (your existing styles unchanged)... */
+        header {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
 
-        /* NEW: Map modal */
+        header h1 {
+            margin: 0;
+            font-size: 1.9rem;
+            letter-spacing: 0.03em;
+        }
+
+        header p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.96rem;
+        }
+
+        .tagline {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(56, 189, 248, 0.08);
+            color: var(--accent);
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .tagline-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: #22c55e;
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.35);
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr);
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            main { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: #020617;
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            padding: 18px 18px 16px;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 10px;
+        }
+
+        label { font-size: 0.8rem; color: var(--muted); }
+
+        input[type="text"], input[type="file"] {
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #020617;
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+
+        input[type="file"] { padding: 6px 8px; }
+
+        button {
+            border-radius: 999px;
+            border: none;
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary { background: linear-gradient(135deg, var(--accent), #34d399); color: #0b1220; }
+        .btn-secondary { background: rgba(15, 23, 42, 0.9); color: var(--muted); border: 1px solid var(--border); }
+
+        .status { margin-top: 8px; font-size: 0.8rem; min-height: 1.2em; }
+        .status.ok { color: var(--success); }
+        .status.error { color: var(--danger); }
+
+        /* Filters */
+        .filters-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .filters-row input,
+        .filters-row select {
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: #020617;
+            color: var(--text);
+            font-size: 0.78rem;
+        }
+
+        .filters-row input::placeholder { color: var(--muted); }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            margin-top: 6px;
+        }
+
+        thead th {
+            position: sticky;
+            top: 0;
+            background: #111827;
+            z-index: 1;
+            font-weight: 500;
+            color: var(--muted);
+            text-align: left;
+            padding: 7px 6px;
+        }
+
+        td {
+            padding: 7px 6px;
+            border-bottom: 1px solid #111827;
+        }
+
+        /* Row tinting */
+        tbody tr.row-verified { background: rgba(34, 197, 94, 0.10) !important; }
+        tbody tr.row-flagged  { background: rgba(249, 115, 22, 0.10) !important; }
+        tbody tr.row-rejected { background: rgba(239, 68, 68, 0.12) !important; }
+
+        .result-badge {
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: 0.72rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        .result-verified { background: rgba(74, 222, 128, 0.12); color: var(--success); }
+        .result-flagged  { background: rgba(249, 115, 22, 0.12); color: var(--flagged); }
+        .result-rejected { background: rgba(239, 68, 68, 0.12); color: var(--danger); }
+
+        .message-cell {
+            max-width: 240px;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .badge-small {
+            font-size: 0.72rem;
+            padding: 2px 6px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            color: var(--muted);
+        }
+
+        /* Map modal */
         #mapModal {
             position: fixed;
             inset: 0;
@@ -50,27 +230,38 @@
         }
 
         #mapPanel {
-            width: 90%;
-            height: 85%;
-            background: #0b1120;
+            width: 92%;
+            max-width: 1100px;
+            height: 88%;
+            background: #020617;
             border-radius: 18px;
             border: 1px solid var(--border);
-            padding: 10px;
+            padding: 10px 10px 12px;
             display: flex;
             flex-direction: column;
+            gap: 8px;
         }
 
         #mapContainer {
-            flex: 1;
+            flex: 1.4;
             border-radius: 12px;
             border: 1px solid var(--border);
+        }
+
+        #elevChartWrapper {
+            flex: 0.8;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 6px 10px;
+            background: #020617;
         }
 
         .map-header {
             display: flex;
             justify-content: space-between;
-            padding: 8px 4px;
+            padding: 4px 4px 6px;
             color: var(--muted);
+            font-size: 0.85rem;
         }
 
         .btn-close {
@@ -86,8 +277,6 @@
 
 <body>
 <div class="page">
-
-    <!-- HEADER -->
     <header>
         <div class="tagline">
             <div class="tagline-dot"></div>
@@ -97,12 +286,32 @@
         <p>Upload a GPX track and compare it with the official route.</p>
     </header>
 
-    <!-- MAIN GRID -->
     <main>
-
-        <!-- UPLOAD FORM (unchanged) -->
+        <!-- UPLOAD FORM -->
         <section class="card">
-            <!-- ... unchanged ... -->
+            <div class="card-header">
+                <h2>New Attempt</h2>
+                <span>Upload runner GPX track</span>
+            </div>
+
+            <form id="uploadForm">
+                <div class="field">
+                    <label for="runnerId">Runner ID</label>
+                    <input id="runnerId" type="text" placeholder="runner-123" required>
+                </div>
+
+                <div class="field">
+                    <label for="gpxFile">GPX file</label>
+                    <input id="gpxFile" type="file" accept=".gpx" required>
+                </div>
+
+                <div style="margin-top:10px; display:flex; gap:8px;">
+                    <button class="btn-primary" id="uploadBtn" type="submit">⬆ Upload & Verify</button>
+                    <button type="button" class="btn-secondary" id="refreshBtn">⟳ Refresh</button>
+                </div>
+
+                <div class="status" id="statusMessage"></div>
+            </form>
         </section>
 
         <!-- ATTEMPTS LOG -->
@@ -130,15 +339,14 @@
                     <tr>
                         <th>Time</th>
                         <th>Runner</th>
-                        <th>Dist</th>
-                        <th>Gain</th>
+                        <th>Dist (km)</th>
+                        <th>Gain (m)</th>
                         <th>Coverage</th>
                         <th>Dev (m)</th>
                         <th>Score</th>
                         <th>Result</th>
                         <th>Message</th>
                         <th>ID</th>
-                        <!-- NEW -->
                         <th>Map</th>
                     </tr>
                     </thead>
@@ -146,11 +354,10 @@
                 </table>
             </div>
         </section>
-
     </main>
 </div>
 
-<!-- NEW: MAP MODAL -->
+<!-- MAP MODAL -->
 <div id="mapModal">
     <div id="mapPanel">
         <div class="map-header">
@@ -158,155 +365,294 @@
             <div class="btn-close" onclick="closeMap()">Close</div>
         </div>
         <div id="mapContainer"></div>
+        <div id="elevChartWrapper">
+            <canvas id="elevChart" height="120"></canvas>
+        </div>
     </div>
 </div>
 
-<!-- NEW: Leaflet JS -->
+<!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
+    const attemptsBody   = document.getElementById("attemptsBody");
+    const attemptCount   = document.getElementById("attemptCount");
+    const filterRunner   = document.getElementById("filterRunner");
+    const filterResult   = document.getElementById("filterResult");
+    const statusMessage  = document.getElementById("statusMessage");
+    const mapModal       = document.getElementById("mapModal");
+    const mapTitle       = document.getElementById("mapTitle");
+    const refreshBtn     = document.getElementById("refreshBtn");
+    const uploadBtn      = document.getElementById("uploadBtn");
+
     let allAttempts = [];
-    const attemptsBody = document.getElementById("attemptsBody");
-    const attemptCount = document.getElementById("attemptCount");
+    let map = null;
+    let elevChart = null;
 
-    function formatNumber(v,d){ return v==null? "" : Number(v).toFixed(d); }
-
-    function formatBadge(r){
-        r = (r||"").toUpperCase();
-        let cls =
-            r==="VERIFIED"?"result-verified":
-            r==="FLAGGED" ?"result-flagged":
-            "result-rejected";
-        return `<span class="result-badge ${cls}"><span></span>${r}</span>`;
+    function setStatus(text, type) {
+        statusMessage.textContent = text || "";
+        statusMessage.className = "status" + (type ? " " + type : "");
     }
 
-    // ---------------------------------------------------------------
-    // RENDER TABLE
-    // ---------------------------------------------------------------
-    function renderAttempts(list){
-        attemptsBody.innerHTML="";
-        if(!list||list.length===0){
-            attemptCount.textContent="0 attempts";
+    function formatNumber(v, d) {
+        return v == null ? "" : Number(v).toFixed(d);
+    }
+
+    function formatBadge(r) {
+        r = (r || "").toUpperCase();
+        let cls =
+            r === "VERIFIED" ? "result-verified" :
+            r === "FLAGGED"  ? "result-flagged"  :
+                               "result-rejected";
+        return `<span class="result-badge ${cls}">${r}</span>`;
+    }
+
+    function renderAttempts(list) {
+        attemptsBody.innerHTML = "";
+        if (!list || list.length === 0) {
+            attemptCount.textContent = "0 attempts";
             return;
         }
-        attemptCount.textContent=`${list.length} attempts`;
 
-        attemptsBody.innerHTML = list.map(a=>{
-            let pct = a.coverageRatio!=null ? (a.coverageRatio*100) : null;
+        attemptCount.textContent = `${list.length} attempts`;
 
-            const cls =
-                a.result==="VERIFIED"?"row-verified":
-                a.result==="FLAGGED" ?"row-flagged":
-                "row-rejected";
+        attemptsBody.innerHTML = list.map(a => {
+            let pct = a.coverageRatio != null ? (a.coverageRatio * 100) : null;
+
+            const rowCls =
+                a.result === "VERIFIED" ? "row-verified" :
+                a.result === "FLAGGED"  ? "row-flagged"  :
+                                          "row-rejected";
+
+            // Escape runner & result for onclick
+            const resultSafe = (a.result || "").replace(/'/g, "\\'");
 
             return `
-            <tr class="${cls}">
+            <tr class="${rowCls}">
                 <td>${new Date(a.attemptTime).toLocaleString()}</td>
                 <td>${a.runnerId}</td>
-                <td>${formatNumber(a.distanceKm,3)}</td>
-                <td>${formatNumber(a.elevationGainM,1)}</td>
-                <td>${pct!=null?formatNumber(pct,1)+"%":""}</td>
-                <td>${formatNumber(a.maxDeviationM,1)}</td>
-                <td>${formatNumber(a.difficultyScore,2)}</td>
+                <td>${formatNumber(a.distanceKm, 3)}</td>
+                <td>${formatNumber(a.elevationGainM, 1)}</td>
+                <td>${pct != null ? formatNumber(pct, 1) + "%" : ""}</td>
+                <td>${formatNumber(a.maxDeviationM, 1)}</td>
+                <td>${formatNumber(a.difficultyScore, 2)}</td>
                 <td>${formatBadge(a.result)}</td>
-                <td class="message-cell" title="${a.message}">${a.message}</td>
+                <td class="message-cell" title="${a.message || ""}">${a.message || ""}</td>
                 <td>${a.id}</td>
-                <!-- NEW: MAP BUTTON -->
-                <td><button onclick="openMap(${a.id})">Map</button></td>
+                <td><button type="button" onclick="openMap(${a.id}, '${resultSafe}')">Map</button></td>
             </tr>`;
         }).join("");
     }
 
-    // ---------------------------------------------------------------
-    // LOAD DATA
-    // ---------------------------------------------------------------
-    async function loadAttempts(){
-        const res = await fetch("/api/attempts");
-        allAttempts = await res.json();
-        applyFilters();
+    function applyFilters() {
+        let filtered = allAttempts.slice();
+
+        const fR = filterRunner.value.toLowerCase();
+        if (fR) {
+            filtered = filtered.filter(a =>
+                (a.runnerId || "").toLowerCase().includes(fR)
+            );
+        }
+
+        const fRes = filterResult.value.toUpperCase();
+        if (fRes) {
+            filtered = filtered.filter(a => (a.result || "").toUpperCase() === fRes);
+        }
+
+        renderAttempts(filtered);
     }
 
-    function applyFilters(){
-        let list = allAttempts;
-        let fR = filterRunner.value.toLowerCase();
-        let fRes = filterResult.value.toUpperCase();
-
-        if(fR) list = list.filter(a => (a.runnerId||"").toLowerCase().includes(fR));
-        if(fRes) list = list.filter(a => a.result===fRes);
-
-        renderAttempts(list);
+    async function loadAttempts() {
+        try {
+            const res = await fetch("/api/attempts");
+            if (!res.ok) {
+                throw new Error("HTTP " + res.status);
+            }
+            allAttempts = await res.json();
+            applyFilters();
+            setStatus("", "");
+        } catch (e) {
+            console.error(e);
+            setStatus("Failed to load attempts.", "error");
+        }
     }
 
-    filterRunner.oninput = applyFilters;
-    filterResult.onchange = applyFilters;
+    filterRunner.addEventListener("input", applyFilters);
+    filterResult.addEventListener("change", applyFilters);
 
-    document.getElementById("refreshBtn").onclick = loadAttempts;
+    refreshBtn.onclick = loadAttempts;
 
-    // ---------------------------------------------------------------
-    // UPLOAD
-    // ---------------------------------------------------------------
-    document.getElementById("uploadForm").onsubmit = async(e)=>{
+    document.getElementById("uploadForm").onsubmit = async (e) => {
         e.preventDefault();
-        const f = new FormData();
-        f.append("runnerId", runnerId.value);
-        f.append("file", gpxFile.files[0]);
-        await fetch("/api/attempts/upload", { method:"POST", body:f });
-        loadAttempts();
+        const runnerId = document.getElementById("runnerId").value.trim();
+        const fileEl   = document.getElementById("gpxFile");
+
+        if (!runnerId) {
+            setStatus("Runner ID is required.", "error");
+            return;
+        }
+        if (!fileEl.files || fileEl.files.length === 0) {
+            setStatus("Please select a GPX file.", "error");
+            return;
+        }
+
+        const form = new FormData();
+        form.append("runnerId", runnerId);
+        form.append("file", fileEl.files[0]);
+
+        uploadBtn.disabled = true;
+        refreshBtn.disabled = true;
+        setStatus("Uploading & verifying…", "ok");
+
+        try {
+            const res = await fetch("/api/attempts/upload", { method: "POST", body: form });
+            const data = await res.json();
+
+            if (!res.ok) {
+                const msg = data && data.error ? data.error : "Upload failed.";
+                throw new Error(msg);
+            }
+
+            setStatus(`Attempt stored: result = ${data.result}`, "ok");
+            await loadAttempts();
+
+        } catch (err) {
+            console.error(err);
+            setStatus("Error verifying attempt: " + err.message, "error");
+        } finally {
+            uploadBtn.disabled = false;
+            refreshBtn.disabled = false;
+        }
     };
 
+    // Initial load
     loadAttempts();
 
-    // ---------------------------------------------------------------
-    // LEAFLET MAP HANDLING
-    // ---------------------------------------------------------------
-    let map = null;
+    // -----------------------------------------------------------
+    // Map + elevation chart
+    // -----------------------------------------------------------
+    async function openMap(id, result) {
+        mapModal.style.display = "flex";
+        mapTitle.textContent = `GPX Viewer – Attempt #${id} (${result})`;
 
-    async function openMap(id){
-        mapModal.style.display="flex";
-        mapTitle.textContent = `GPX Viewer – Attempt #${id}`;
-
-        if(!map){
+        if (!map) {
             map = L.map("mapContainer");
             L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
                 maxZoom: 18
             }).addTo(map);
         }
 
-        const res = await fetch(`/api/attempts/${id}/track`);
-        const pts = await res.json();
-
-        if(!pts || pts.length===0){
-            alert("No GPX track available.");
-            return;
-        }
-
-        const latlngs = pts.map(p => [p.latitude, p.longitude]);
-
-        // REMOVE existing layers first
-        map.eachLayer(l=>{
-            if(l instanceof L.Polyline || l instanceof L.Marker) map.removeLayer(l);
+        // Remove old overlays (keep base tile)
+        map.eachLayer(l => {
+            if (!(l instanceof L.TileLayer)) {
+                map.removeLayer(l);
+            }
         });
 
-        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+        try {
+            const res = await fetch(`/api/attempts/${id}/track`);
+            if (!res.ok) {
+                throw new Error("HTTP " + res.status);
+            }
+            const pts = await res.json();
 
-        // Runner polyline
-        const poly = L.polyline(latlngs, {color:"#38bdf8", weight:4});
-        poly.addTo(map);
-        map.fitBounds(poly.getBounds());
+            if (!pts || pts.length === 0) {
+                alert("No GPX track available for this attempt.");
+                return;
+            }
 
-        // Optional: Fetch official route & overlay
-        const routeRes = await fetch("/api/route/track").catch(()=>null);
-        if(routeRes && routeRes.ok){
-            const routePts = await routeRes.json();
-            const routeLatLngs = routePts.map(p=>[p.latitude,p.longitude]);
-            L.polyline(routeLatLngs,{color:"#4ade80",weight:3,opacity:0.7}).addTo(map);
+            const latlngs = pts.map(p => [p.latitude, p.longitude]);
+
+            // Color by result
+            const rUpper = (result || "").toUpperCase();
+            let pathColor =
+                rUpper === "VERIFIED" ? "#4ade80" :
+                rUpper === "FLAGGED"  ? "#f97316" :
+                                        "#ef4444";
+
+            const runnerLine = L.polyline(latlngs, {
+                color: pathColor,
+                weight: 4,
+                opacity: 0.95
+            }).addTo(map);
+
+            // Try to overlay official route (green)
+            try {
+                const routeRes = await fetch("/api/route/track");
+                if (routeRes.ok) {
+                    const routePts = await routeRes.json();
+                    if (routePts && routePts.length > 0) {
+                        const routeLatLngs = routePts.map(p => [p.latitude, p.longitude]);
+                        L.polyline(routeLatLngs, {
+                            color: "#22c55e",
+                            weight: 3,
+                            opacity: 0.7,
+                            dashArray: "4,4"
+                        }).addTo(map);
+                    }
+                }
+            } catch (e) {
+                console.warn("Failed to load route track:", e);
+            }
+
+            map.fitBounds(runnerLine.getBounds());
+            setTimeout(() => map.invalidateSize(), 100);
+
+            // Elevation chart
+            const labels = pts.map((p, i) => i);
+            const elevations = pts.map(p => p.elevation != null ? p.elevation : 0);
+
+            const ctx = document.getElementById("elevChart").getContext("2d");
+            if (!elevChart) {
+                elevChart = new Chart(ctx, {
+                    type: "line",
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: "Elevation (m)",
+                            data: elevations,
+                            tension: 0.2,
+                            borderWidth: 2,
+                            pointRadius: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { labels: { color: "#e5e7eb" } }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: "#9ca3af" },
+                                grid: { color: "#1f2937" }
+                            },
+                            y: {
+                                ticks: { color: "#9ca3af" },
+                                grid: { color: "#1f2937" }
+                            }
+                        }
+                    }
+                });
+            } else {
+                elevChart.data.labels = labels;
+                elevChart.data.datasets[0].data = elevations;
+                elevChart.update();
+            }
+
+        } catch (err) {
+            console.error(err);
+            alert("Failed to load track for this attempt.");
         }
     }
 
-    function closeMap(){
-        mapModal.style.display="none";
+    function closeMap() {
+        mapModal.style.display = "none";
     }
-</script>
 
+    // Expose to inline onclick
+    window.openMap = openMap;
+    window.closeMap = closeMap;
+</script>
 </body>
 </html>
