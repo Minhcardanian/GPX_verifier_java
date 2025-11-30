@@ -13,75 +13,117 @@
 
     <style>
         :root {
-            --bg: #0f172a;
-            --bg-alt: #020617;
-            --card: #111827;
-            --accent: #38bdf8;
-            --accent-soft: rgba(56, 189, 248, 0.1);
-            --danger: #f97373;
-            --text: #e5e7eb;
-            --muted: #9ca3af;
-            --border: #1f2933;
-            --success: #4ade80;
-            --warning: #facc15;
-            --flagged: #f97316;
+            --bg: #f5f5f7;
+            --card: #ffffff;
+            --border: #e5e5ea;
+            --border-strong: #d1d1d6;
+
+            --text: #111827;
+            --muted: #6b7280;
+            --subtle: #a1a1aa;
+
+            --blue: #0a84ff;
+            --green: #34c759;
+            --orange: #ff9f0a;
+            --red: #ff453a;
+
+            /* Softer row tints */
+            --verified-bg: rgba(52, 199, 89, 0.06);
+            --flagged-bg:  rgba(255, 159, 10, 0.06);
+            --rejected-bg: rgba(255, 69, 58, 0.06);
         }
 
         * { box-sizing: border-box; }
 
-        body {
+        html, body {
             margin: 0;
             padding: 0;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: radial-gradient(circle at top left, #1f2937 0, #020617 45%, #020617 100%);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+            background: var(--bg);
             color: var(--text);
+            -webkit-font-smoothing: antialiased;
         }
 
-        .page { max-width: 1080px; margin: 0 auto; padding: 24px 16px 40px; }
+        .page {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 32px 18px 40px;
+        }
+
+        /* HEADER */
 
         header {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            margin-bottom: 24px;
-        }
-
-        header h1 {
-            margin: 0;
-            font-size: 1.9rem;
-            letter-spacing: 0.03em;
-        }
-
-        header p {
-            margin: 0;
-            color: var(--muted);
-            font-size: 0.96rem;
+            gap: 10px;
+            margin-bottom: 26px;
         }
 
         .tagline {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 4px 10px;
+            padding: 4px 12px;
             border-radius: 999px;
-            background: rgba(56, 189, 248, 0.08);
-            color: var(--accent);
-            font-size: 0.75rem;
+            border: 1px solid #d0e2ff;
+            background: #f4f7ff;
+            color: var(--blue);
+            font-size: 11px;
             font-weight: 500;
-            margin-bottom: 4px;
         }
 
         .tagline-dot {
             width: 7px;
             height: 7px;
             border-radius: 999px;
-            background: #22c55e;
-            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.35);
+            background: var(--green);
         }
+
+        .title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .title-main h1 {
+            margin: 0;
+            font-size: 30px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+        }
+
+        .subtitle {
+            margin: 4px 0 0;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .title-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--border-strong);
+            background: #ffffff;
+            font-size: 11px;
+            color: var(--subtle);
+        }
+
+        .title-pill-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: var(--green);
+        }
+
+        /* LAYOUT */
 
         main {
             display: grid;
-            grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr);
+            grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.2fr);
             gap: 20px;
         }
 
@@ -90,17 +132,29 @@
         }
 
         .card {
-            background: #020617;
+            background: var(--card);
             border-radius: 18px;
             border: 1px solid var(--border);
             padding: 18px 18px 16px;
-            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
         }
 
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .card-header h2 {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 600;
+        }
+
+        .card-header span {
+            font-size: 12px;
+            color: var(--muted);
         }
 
         .field {
@@ -110,98 +164,142 @@
             margin-bottom: 10px;
         }
 
-        label { font-size: 0.8rem; color: var(--muted); }
-
-        input[type="text"], input[type="file"] {
-            padding: 8px 10px;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            background: #020617;
-            color: var(--text);
-            font-size: 0.9rem;
+        label {
+            font-size: 11px;
+            color: var(--subtle);
+            font-weight: 500;
         }
 
-        input[type="file"] { padding: 6px 8px; }
+        input[type="text"],
+        input[type="file"],
+        select {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid var(--border-strong);
+            background: #ffffff;
+            color: var(--text);
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+        }
+
+        input[type="file"] {
+            padding: 6px 8px;
+        }
+
+        input::placeholder { color: #c4c4c7; }
+
+        input:focus,
+        select:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.18);
+        }
+
+        /* BUTTONS */
 
         button {
             border-radius: 999px;
-            border: none;
-            padding: 8px 14px;
-            font-size: 0.85rem;
+            border: 1px solid var(--border-strong);
+            padding: 7px 14px;
+            font-size: 13px;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            background: #ffffff;
+            color: #111827;
+            font-weight: 500;
+            transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, opacity 0.12s ease;
         }
 
-        .btn-primary { background: linear-gradient(135deg, var(--accent), #34d399); color: #0b1220; }
-        .btn-secondary { background: rgba(15, 23, 42, 0.9); color: var(--muted); border: 1px solid var(--border); }
+        .btn-primary {
+            background: #0b82ff;
+            border-color: #0b82ff;
+            color: #ffffff;
+        }
 
-        .status { margin-top: 8px; font-size: 0.8rem; min-height: 1.2em; }
-        .status.ok { color: var(--success); }
-        .status.error { color: var(--danger); }
+        .btn-primary:disabled,
+        .btn-secondary:disabled {
+            opacity: 0.55;
+            cursor: default;
+        }
 
-        /* Filters */
+        .btn-secondary {
+            background: #ffffff;
+            color: var(--muted);
+        }
+
+        .status {
+            margin-top: 8px;
+            font-size: 11px;
+            min-height: 1.2em;
+            color: var(--muted);
+        }
+
+        .status.ok { color: var(--green); }
+        .status.error { color: var(--red); }
+
+        /* FILTERS */
+
         .filters-row {
             display: flex;
             gap: 8px;
             align-items: center;
+            justify-content: flex-end;
         }
 
         .filters-row input,
         .filters-row select {
+            width: auto;
+            min-width: 0;
             padding: 6px 10px;
+            font-size: 12px;
             border-radius: 999px;
-            border: 1px solid var(--border);
-            background: #020617;
-            color: var(--text);
-            font-size: 0.78rem;
         }
 
-        .filters-row input::placeholder { color: var(--muted); }
+        .badge-small {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--border-strong);
+            color: var(--muted);
+            background: #f9fafb;
+        }
+
+        /* TABLE */
+
+        .table-wrapper {
+            max-height: 360px;
+            overflow: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #ffffff;
+        }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.8rem;
-            margin-top: 6px;
+            font-size: 12px;
         }
 
         thead th {
             position: sticky;
             top: 0;
-            background: #111827;
+            background: #f9fafb;
             z-index: 1;
             font-weight: 500;
-            color: var(--muted);
+            color: var(--subtle);
             text-align: left;
-            padding: 7px 6px;
+            padding: 8px 8px;
+            border-bottom: 1px solid var(--border);
         }
 
         td {
-            padding: 7px 6px;
-            border-bottom: 1px solid #111827;
+            padding: 7px 8px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
         }
-
-        /* Row tinting */
-        tbody tr.row-verified { background: rgba(34, 197, 94, 0.10) !important; }
-        tbody tr.row-flagged  { background: rgba(249, 115, 22, 0.10) !important; }
-        tbody tr.row-rejected { background: rgba(239, 68, 68, 0.12) !important; }
-
-        .result-badge {
-            border-radius: 999px;
-            padding: 2px 8px;
-            font-size: 0.72rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            letter-spacing: 0.03em;
-            text-transform: uppercase;
-        }
-
-        .result-verified { background: rgba(74, 222, 128, 0.12); color: var(--success); }
-        .result-flagged  { background: rgba(249, 115, 22, 0.12); color: var(--flagged); }
-        .result-rejected { background: rgba(239, 68, 68, 0.12); color: var(--danger); }
 
         .message-cell {
             max-width: 240px;
@@ -210,19 +308,55 @@
             text-overflow: ellipsis;
         }
 
-        .badge-small {
-            font-size: 0.72rem;
-            padding: 2px 6px;
+        tbody tr.row-verified { background: var(--verified-bg) !important; }
+        tbody tr.row-flagged  { background: var(--flagged-bg) !important; }
+        tbody tr.row-rejected { background: var(--rejected-bg) !important; }
+
+        .result-badge {
             border-radius: 999px;
-            border: 1px solid rgba(148, 163, 184, 0.4);
-            color: var(--muted);
+            padding: 3px 8px;
+            font-size: 10px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
         }
 
-        /* Map modal */
+        .result-verified {
+            background: var(--verified-bg);
+            color: var(--green);
+            border: 1px solid rgba(52,199,89,0.35);
+        }
+
+        .result-flagged {
+            background: var(--flagged-bg);
+            color: var(--orange);
+            border: 1px solid rgba(255,159,10,0.35);
+        }
+
+        .result-rejected {
+            background: var(--rejected-bg);
+            color: var(--red);
+            border: 1px solid rgba(255,69,58,0.35);
+        }
+
+        td button[type="button"] {
+            padding: 4px 10px;
+            font-size: 11px;
+            border-radius: 999px;
+            border: 1px solid var(--border-strong);
+            background: #f5f5f7;
+            color: #3a3a3c;
+        }
+
+        td button[type="button"]:hover {
+            background: #e5e5ea;
+        }
+
+        /* MAP MODAL */
+
         #mapModal {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.65);
+            background: rgba(0, 0, 0, 0.25);
             display: none;
             align-items: center;
             justify-content: center;
@@ -233,19 +367,29 @@
             width: 92%;
             max-width: 1100px;
             height: 88%;
-            background: #020617;
+            background: #ffffff;
             border-radius: 18px;
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-strong);
             padding: 10px 10px 12px;
             display: flex;
             flex-direction: column;
             gap: 8px;
         }
 
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 4px 6px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
         #mapContainer {
             flex: 1.4;
             border-radius: 12px;
             border: 1px solid var(--border);
+            overflow: hidden;
         }
 
         #elevChartWrapper {
@@ -253,24 +397,20 @@
             border-radius: 12px;
             border: 1px solid var(--border);
             padding: 6px 10px;
-            background: #020617;
-        }
-
-        .map-header {
-            display: flex;
-            justify-content: space-between;
-            padding: 4px 4px 6px;
-            color: var(--muted);
-            font-size: 0.85rem;
+            background: #ffffff;
         }
 
         .btn-close {
-            background: var(--danger);
-            padding: 4px 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            color: #fff;
-            font-size: 0.8rem;
+            background: #ffffff;
+            border-radius: 999px;
+            border: 1px solid var(--border-strong);
+            color: #3a3a3c;
+            padding: 4px 12px;
+            font-size: 12px;
+        }
+
+        .btn-close:hover {
+            background: #f5f5f7;
         }
     </style>
 </head>
@@ -282,8 +422,20 @@
             <div class="tagline-dot"></div>
             <span>Attempt Verifier · Java Spring Boot</span>
         </div>
-        <h1>Trail GPX Attempt Verifier</h1>
-        <p>Upload a GPX track and compare it with the official route.</p>
+
+        <div class="title-row">
+            <div class="title-main">
+                <h1>Trail GPX Attempt Verifier</h1>
+                <p class="subtitle">
+                    A minimal dashboard to verify runner GPX attempts against the official course.
+                </p>
+            </div>
+
+            <div class="title-pill">
+                <span class="title-pill-dot"></span>
+                <span>Dashboard</span>
+            </div>
+        </div>
     </header>
 
     <main>
@@ -296,17 +448,17 @@
 
             <form id="uploadForm">
                 <div class="field">
-                    <label for="runnerId">Runner ID</label>
+                    <label for="runnerId">RUNNER ID</label>
                     <input id="runnerId" type="text" placeholder="runner-123" required>
                 </div>
 
                 <div class="field">
-                    <label for="gpxFile">GPX file</label>
+                    <label for="gpxFile">GPX FILE</label>
                     <input id="gpxFile" type="file" accept=".gpx" required>
                 </div>
 
                 <div style="margin-top:10px; display:flex; gap:8px;">
-                    <button class="btn-primary" id="uploadBtn" type="submit">⬆ Upload & Verify</button>
+                    <button class="btn-primary" id="uploadBtn" type="submit">⬆ Upload &amp; Verify</button>
                     <button type="button" class="btn-secondary" id="refreshBtn">⟳ Refresh</button>
                 </div>
 
@@ -333,7 +485,7 @@
                 </div>
             </div>
 
-            <div style="max-height:360px; overflow:auto; border:1px solid #0b1120; border-radius:12px;">
+            <div class="table-wrapper">
                 <table>
                     <thead>
                     <tr>
@@ -424,7 +576,6 @@
                 a.result === "FLAGGED"  ? "row-flagged"  :
                                           "row-rejected";
 
-            // Escape runner & result for onclick
             const resultSafe = (a.result || "").replace(/'/g, "\\'");
 
             return `
@@ -528,9 +679,6 @@
     // Initial load
     loadAttempts();
 
-    // -----------------------------------------------------------
-    // Map + elevation chart
-    // -----------------------------------------------------------
     async function openMap(id, result) {
         mapModal.style.display = "flex";
         mapTitle.textContent = `GPX Viewer – Attempt #${id} (${result})`;
@@ -542,7 +690,7 @@
             }).addTo(map);
         }
 
-        // Remove old overlays (keep base tile)
+        // Remove old overlays (keep tiles)
         map.eachLayer(l => {
             if (!(l instanceof L.TileLayer)) {
                 map.removeLayer(l);
@@ -563,12 +711,11 @@
 
             const latlngs = pts.map(p => [p.latitude, p.longitude]);
 
-            // Color by result
             const rUpper = (result || "").toUpperCase();
             let pathColor =
-                rUpper === "VERIFIED" ? "#4ade80" :
-                rUpper === "FLAGGED"  ? "#f97316" :
-                                        "#ef4444";
+                rUpper === "VERIFIED" ? "#34c759" :
+                rUpper === "FLAGGED"  ? "#ff9f0a" :
+                                        "#ff453a";
 
             const runnerLine = L.polyline(latlngs, {
                 color: pathColor,
@@ -576,7 +723,7 @@
                 opacity: 0.95
             }).addTo(map);
 
-            // Try to overlay official route (green)
+            // Official route overlay
             try {
                 const routeRes = await fetch("/api/route/track");
                 if (routeRes.ok) {
@@ -584,7 +731,7 @@
                     if (routePts && routePts.length > 0) {
                         const routeLatLngs = routePts.map(p => [p.latitude, p.longitude]);
                         L.polyline(routeLatLngs, {
-                            color: "#22c55e",
+                            color: "#34c759",
                             weight: 3,
                             opacity: 0.7,
                             dashArray: "4,4"
@@ -613,23 +760,24 @@
                             data: elevations,
                             tension: 0.2,
                             borderWidth: 2,
-                            pointRadius: 0
+                            pointRadius: 0,
+                            borderColor: "#0a84ff"
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { labels: { color: "#e5e7eb" } }
+                            legend: { labels: { color: "#6b7280", font: { size: 11 } } }
                         },
                         scales: {
                             x: {
-                                ticks: { color: "#9ca3af" },
-                                grid: { color: "#1f2937" }
+                                ticks: { color: "#a1a1aa", font: { size: 10 } },
+                                grid: { color: "#e5e5ea" }
                             },
                             y: {
-                                ticks: { color: "#9ca3af" },
-                                grid: { color: "#1f2937" }
+                                ticks: { color: "#a1a1aa", font: { size: 10 } },
+                                grid: { color: "#e5e5ea" }
                             }
                         }
                     }
@@ -650,7 +798,6 @@
         mapModal.style.display = "none";
     }
 
-    // Expose to inline onclick
     window.openMap = openMap;
     window.closeMap = closeMap;
 </script>
