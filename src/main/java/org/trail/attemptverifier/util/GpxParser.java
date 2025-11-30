@@ -3,94 +3,111 @@ package org.trail.attemptverifier.util;
 import org.springframework.stereotype.Component;
 import org.trail.attemptverifier.model.TrackPoint;
 
-import java.io.IOException;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.w3c.dom.*;
+
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
+/**
+ * Robust GPX Parser using DOM.
+ *
+ * Why DOM instead of regex?
+ *  - Handles namespaces correctly
+ *  - Properly handles nested tags
+ *  - Rejects malformed XML early
+ *  - Matches industrial GPX tool output
+ *
+ * Demonstrates:
+ *  - Abstraction (service layer depends only on parse() result)
+ *  - Encapsulation (implementation hidden)
+ */
 @Component
 public class GpxParser {
-
-    // Regex to match <trkpt ...> ... </trkpt>
-    private static final Pattern TRKPT_PATTERN =
-            Pattern.compile("<trkpt([^>]*)>(.*?)</trkpt>",
-                    Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-
-    private static final Pattern LAT_PATTERN =
-            Pattern.compile("lat\\s*=\\s*\"([^\"]+)\"", Pattern.CASE_INSENSITIVE);
-
-    private static final Pattern LON_PATTERN =
-            Pattern.compile("lon\\s*=\\s*\"([^\"]+)\"", Pattern.CASE_INSENSITIVE);
-
-    private static final Pattern ELE_PATTERN =
-            Pattern.compile("<ele>(.*?)</ele>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-
-    private static final Pattern TIME_PATTERN =
-            Pattern.compile("<time>(.*?)</time>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
     public List<TrackPoint> parse(InputStream inputStream) {
         List<TrackPoint> points = new ArrayList<>();
 
         try {
-            // Read the whole file as UTF-8 text
-            String content = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
 
-            Matcher trkptMatcher = TRKPT_PATTERN.matcher(content);
-            int count = 0;
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(inputStream);
 
-            while (trkptMatcher.find()) {
-                count++;
+            NodeList trkptNodes = doc.getElementsByTagName("trkpt");
+            System.out.println("[GpxParser] DOM found " + trkptNodes.getLength() + " trkpt nodes.");
 
-                String attrs = trkptMatcher.group(1);
-                String inner = trkptMatcher.group(2);
+            for (int i = 0; i < trkptNodes.getLength(); i++) {
+                Node node = trkptNodes.item(i);
+                if (node.getNodeType() != Node.ELEMENT_NODE) continue;
 
-                Double lat = extractDouble(attrs, LAT_PATTERN);
-                Double lon = extractDouble(attrs, LON_PATTERN);
+                Element el = (Element) node;
+
+                // Latitude + Longitude (required by GPX spec)
+                Double lat = parseDoubleAttr(el, "lat");
+                Double lon = parseDoubleAttr(el, "lon");
 
                 if (lat == null || lon == null) {
-                    continue; // skip invalid points
+                    continue; // skip corrupted points
                 }
 
-                Double ele = extractDouble(inner, ELE_PATTERN);
-                Instant time = extractInstant(inner, TIME_PATTERN);
+                // Elevation (optional)
+                Double ele = parseChildDouble(el, "ele");
+
+                // Time (optional)
+                Instant time = parseChildTime(el, "time");
 
                 points.add(new TrackPoint(lat, lon, ele, time));
             }
 
-            System.out.println("[GpxParser] Found " + count + " <trkpt> blocks, returning "
-                    + points.size() + " valid points.");
-
-        } catch (IOException e) {
-            System.err.println("[GpxParser] WARNING: failed to read GPX input: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("[GpxParser] ERROR parsing GPX via DOM: " + e.getMessage());
         }
 
+        System.out.println("[GpxParser] Returning " + points.size() + " valid TrackPoint(s).");
         return points;
     }
 
-    private Double extractDouble(String text, Pattern pattern) {
-        Matcher m = pattern.matcher(text);
-        if (m.find()) {
-            try {
-                return Double.parseDouble(m.group(1).trim());
-            } catch (NumberFormatException ignored) {
-            }
+    // -------------------------
+    // Helpers (Encapsulation)
+    // -------------------------
+
+    private Double parseDoubleAttr(Element el, String attrName) {
+        if (!el.hasAttribute(attrName)) return null;
+        try {
+            return Double.parseDouble(el.getAttribute(attrName));
+        } catch (NumberFormatException ignored) {
+            return null;
         }
-        return null;
     }
 
-    private Instant extractInstant(String text, Pattern pattern) {
-        Matcher m = pattern.matcher(text);
-        if (m.find()) {
-            try {
-                return Instant.parse(m.group(1).trim());
-            } catch (DateTimeParseException ignored) {
-            }
+    private Double parseChildDouble(Element parent, String tagName) {
+        NodeList list = parent.getElementsByTagName(tagName);
+        if (list.getLength() == 0) return null;
+
+        String val = list.item(0).getTextContent().trim();
+        try {
+            return Double.parseDouble(val);
+        } catch (Exception ignored) {
+            return null;
         }
-        return null;
+    }
+
+    private Instant parseChildTime(Element parent, String tagName) {
+        NodeList list = parent.getElementsByTagName(tagName);
+        if (list.getLength() == 0) return null;
+
+        String val = list.item(0).getTextContent().trim();
+        try {
+            return Instant.parse(val);
+        } catch (DateTimeParseException ignored) {
+            return null;
+        }
     }
 }

@@ -11,65 +11,96 @@ import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Loads and exposes the official route used for verification.
+ *
+ * Responsibilities:
+ *  - Load GPX route from classpath
+ *  - Parse into TrackPoint list
+ *  - Precompute metrics (distance, elevation)
+ *  - Provide clean accessors for services
+ *
+ * Demonstrates OOP:
+ *  - Encapsulation (route stored privately)
+ *  - Abstraction (services use getRouteTrack(), not GPX logic)
+ *  - Extensibility (future multiple routes or inheritance via Route subclasses)
+ */
 @Service
 public class RouteService {
 
     private final Route route;
-    private final double routeDistanceKm;
-    private final double routeElevationGainM;
+    private final TrackMetrics routeMetrics;
 
     public RouteService(GpxParser gpxParser) {
         Route loadedRoute = null;
-        double distanceKm = 0.0;
-        double elevationGainM = 0.0;
+        TrackMetrics metrics = null;
 
-        try (InputStream in = getClass().getClassLoader()
+        try (InputStream in = getClass()
+                .getClassLoader()
                 .getResourceAsStream("gpx/route_official.gpx")) {
 
             if (in == null) {
-                System.err.println("[RouteService] WARNING: gpx/route_official.gpx not found on classpath.");
+                System.err.println("[RouteService] ERROR: Missing resource gpx/route_official.gpx");
             } else {
                 try {
-                    List<TrackPoint> trackPoints = gpxParser.parse(in);
-                    if (trackPoints.isEmpty()) {
-                        System.err.println("[RouteService] WARNING: official route GPX has no track points.");
+                    List<TrackPoint> points = gpxParser.parse(in);
+
+                    if (points == null || points.isEmpty()) {
+                        System.err.println("[RouteService] WARNING: Route GPX parsed but contains no points.");
                     } else {
-                        loadedRoute = new Route("Official Test Route", trackPoints);
-                        distanceKm = TrackMetrics.computeTotalDistanceKm(trackPoints);
-                        elevationGainM = TrackMetrics.computeElevationGainM(trackPoints);
-                        System.out.println("[RouteService] Loaded official route with " +
-                                trackPoints.size() + " points, distance " +
-                                distanceKm + " km, elevation gain " +
-                                elevationGainM + " m.");
+                        loadedRoute = new Route("Official Test Route", points);
+
+                        metrics = TrackMetrics.fromTracks(
+                                points,
+                                null,          // route = null because this is the route itself
+                                0.0            // tolerance not needed
+                        );
+
+                        System.out.println("[RouteService] Loaded route: "
+                                + points.size() + " points, "
+                                + metrics.getDistanceKm() + " km, "
+                                + metrics.getElevationGainM() + " m gain.");
                     }
-                } catch (RuntimeException e) {
-                    System.err.println("[RouteService] WARNING: failed to parse official route GPX: "
-                            + e.getMessage());
+
+                } catch (Exception e) {
+                    System.err.println("[RouteService] GPX parse EXCEPTION: " + e.getMessage());
                 }
             }
 
         } catch (IOException e) {
-            System.err.println("[RouteService] WARNING: failed to load official route GPX: " + e.getMessage());
+            System.err.println("[RouteService] IO error loading GPX: " + e.getMessage());
         }
 
         this.route = loadedRoute;
-        this.routeDistanceKm = distanceKm;
-        this.routeElevationGainM = elevationGainM;
+        this.routeMetrics = metrics;
     }
 
+    // -----------------------
+    // Public API
+    // -----------------------
+
+    /** Full route metadata object */
     public Route getRoute() {
         return route;
     }
 
-    public List<TrackPoint> getTrackPoints() {
-        return route != null ? route.getTrackPoints() : Collections.emptyList();
+    /** Returns raw TrackPoint list */
+    public List<TrackPoint> getRouteTrack() {
+        return (route != null) ? route.getTrackPoints() : Collections.emptyList();
     }
 
+    /** Route distance in km */
     public double getRouteDistanceKm() {
-        return routeDistanceKm;
+        return (routeMetrics != null) ? routeMetrics.getDistanceKm() : 0.0;
     }
 
+    /** Route total ascent */
     public double getRouteElevationGainM() {
-        return routeElevationGainM;
+        return (routeMetrics != null) ? routeMetrics.getElevationGainM() : 0.0;
+    }
+
+    /** Access all precomputed metrics */
+    public TrackMetrics getRouteMetrics() {
+        return routeMetrics;
     }
 }

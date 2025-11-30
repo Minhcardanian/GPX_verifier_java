@@ -1,5 +1,6 @@
 package org.trail.attemptverifier.controller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,7 +10,13 @@ import org.trail.attemptverifier.repository.AttemptRepository;
 import org.trail.attemptverifier.service.AttemptVerifierService;
 
 import java.util.List;
+import java.util.Optional;
 
+/**
+ * REST API for attempt verification & querying.
+ * Clean layering:
+ *   Controller → Service → Repository (OOP, encapsulation)
+ */
 @RestController
 @RequestMapping("/api/attempts")
 public class AttemptController {
@@ -23,28 +30,100 @@ public class AttemptController {
         this.attemptRepository = attemptRepository;
     }
 
+    // ------------------------------------------------------------
+    // Upload + verify GPX attempt
+    // ------------------------------------------------------------
     @PostMapping(
             path = "/upload",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<Attempt> uploadAttempt(
+    public ResponseEntity<?> uploadAttempt(
             @RequestParam("runnerId") String runnerId,
             @RequestParam("file") MultipartFile gpxFile
     ) {
-        Attempt attempt = attemptVerifierService.verifyAttempt(gpxFile, runnerId);
-        return ResponseEntity.ok(attempt);
+        if (runnerId == null || runnerId.isBlank()) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Runner ID cannot be empty."));
+        }
+        if (gpxFile == null || gpxFile.isEmpty()) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("GPX file is required."));
+        }
+
+        try {
+            Attempt attempt = attemptVerifierService.verifyAttempt(gpxFile, runnerId.trim());
+            return ResponseEntity.ok(attempt);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Verification failed: " + e.getMessage()));
+        }
     }
 
-    @GetMapping
-    public List<Attempt> listAttempts() {
-        return attemptRepository.findAll();
+    // ------------------------------------------------------------
+    // List + filter attempts
+    // Supports:
+    //   /api/attempts
+    //   /api/attempts?runner=runner-1
+    //   /api/attempts?result=VERIFIED
+    //   /api/attempts?runner=runner-1&result=FLAGGED
+    // ------------------------------------------------------------
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<Attempt>> listAttempts(
+            @RequestParam(value = "runner", required = false) String runnerId,
+            @RequestParam(value = "result", required = false) String result
+    ) {
+
+        boolean filterRunner = runnerId != null && !runnerId.isBlank();
+        boolean filterResult = result != null && !result.isBlank();
+
+        List<Attempt> list;
+
+        if (!filterRunner && !filterResult) {
+            list = attemptRepository.findAll();
+
+        } else if (filterRunner && filterResult) {
+            list = attemptRepository.findByRunnerIdAndResult(
+                    runnerId.trim(),
+                    result.trim().toUpperCase()
+            );
+
+        } else if (filterRunner) {
+            list = attemptRepository.findByRunnerId(runnerId.trim());
+
+        } else {
+            list = attemptRepository.findByResult(result.trim().toUpperCase());
+        }
+
+        return ResponseEntity.ok(list);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Attempt> getAttempt(@PathVariable("id") Long id) {
-        return attemptRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    // ------------------------------------------------------------
+    // GET /api/attempts/{id}
+    // ------------------------------------------------------------
+    @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> getAttempt(@PathVariable("id") Long id) {
+        Optional<Attempt> found = attemptRepository.findById(id);
+
+        if (found.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse("Attempt ID " + id + " not found."));
+        }
+
+        return ResponseEntity.ok(found.get());
+    }
+
+    // ------------------------------------------------------------
+    // Simple error DTO (OOP encapsulation)
+    // ------------------------------------------------------------
+    public static class ErrorResponse {
+        private final String error;
+
+        public ErrorResponse(String error) {
+            this.error = error;
+        }
+
+        public String getError() {
+            return error;
+        }
     }
 }
