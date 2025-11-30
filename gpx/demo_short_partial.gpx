@@ -1,0 +1,7 @@
+<gpx version="1.1" creator="Test">
+  <trk><name>partial</name><trkseg>
+    <trkpt lat="11.5650" lon="106.9000"><ele>30</ele><time>2024-01-01T10:00:00Z</time></trkpt>
+    <trkpt lat="11.5655" lon="106.9005"><ele>31</ele><time>2024-01-01T10:01:00Z</time></trkpt>
+    <trkpt lat="11.5660" lon="106.9010"><ele>32</ele><time>2024-01-01T10:02:00Z</time></trkpt>
+  </trkseg></trk>
+</gpx>
