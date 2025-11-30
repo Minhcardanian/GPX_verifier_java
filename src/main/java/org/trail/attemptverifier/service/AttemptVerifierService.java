@@ -67,7 +67,8 @@ public class AttemptVerifierService {
             rawBytes = gpxFile.getBytes();
         } catch (IOException e) {
             System.err.println("[AttemptVerifierService] Failed to read GPX bytes: " + e.getMessage());
-            return buildRejectedAttempt(runnerId, "Could not read GPX file.");
+            // In this case we truly have no bytes to store
+            return buildRejectedAttempt(runnerId, "Could not read GPX file.", null);
         }
 
         // ---------------------------------------
@@ -78,11 +79,13 @@ public class AttemptVerifierService {
             attemptTrack = gpxParser.parse(in);
         } catch (Exception e) {
             System.err.println("[AttemptVerifierService] GPX parse error: " + e.getMessage());
-            return buildRejectedAttempt(runnerId, "Invalid GPX content.");
+            // Still store the original bytes so the user can inspect the file on the map
+            return buildRejectedAttempt(runnerId, "Invalid GPX content.", rawBytes);
         }
 
         if (attemptTrack.isEmpty()) {
-            return buildRejectedAttempt(runnerId, "No valid track points found.");
+            // Parsed but no usable points — still keep the file
+            return buildRejectedAttempt(runnerId, "No valid track points found.", rawBytes);
         }
 
         // ---------------------------------------
@@ -90,7 +93,8 @@ public class AttemptVerifierService {
         // ---------------------------------------
         List<TrackPoint> route = routeService.getTrackPoints();
         if (route == null || route.isEmpty()) {
-            return buildRejectedAttempt(runnerId, "Official route not available.");
+            // Backend configuration problem; keep attempt & file
+            return buildRejectedAttempt(runnerId, "Official route not available.", rawBytes);
         }
 
         // ---------------------------------------
@@ -142,15 +146,16 @@ public class AttemptVerifierService {
         attempt.setMaxDeviationM(maxDeviationM);
         attempt.setResult(result);
         attempt.setMessage("Verification completed using OOP strategy classes.");
-        attempt.setGpxData(rawBytes);   // NEW: store GPX bytes
+        attempt.setGpxData(rawBytes);   // store GPX bytes for ANY classification
 
         return attemptRepository.save(attempt);
     }
 
     /**
      * Helper for standardizing rejected attempts.
+     * rawBytes may be null if we truly could not read the file.
      */
-    private Attempt buildRejectedAttempt(String runnerId, String message) {
+    private Attempt buildRejectedAttempt(String runnerId, String message, byte[] rawBytes) {
         Attempt attempt = new Attempt();
         attempt.setRunnerId(runnerId);
         attempt.setAttemptTime(LocalDateTime.now());
@@ -161,7 +166,9 @@ public class AttemptVerifierService {
         attempt.setMaxDeviationM(null);
         attempt.setResult("REJECTED");
         attempt.setMessage(message);
-        attempt.setGpxData(null);
+        // Keep the original file bytes if we have them,
+        // so the GPX viewer can still display what the user uploaded.
+        attempt.setGpxData(rawBytes);
         return attemptRepository.save(attempt);
     }
 

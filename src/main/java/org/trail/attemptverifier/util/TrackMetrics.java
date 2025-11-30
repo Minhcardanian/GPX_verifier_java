@@ -2,15 +2,13 @@ package org.trail.attemptverifier.util;
 
 import org.trail.attemptverifier.model.TrackPoint;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * TrackMetrics represents a computed summary of a list of TrackPoints.
- * This version follows OOP guidelines:
- *  - Encapsulated instance fields
- *  - Multiple constructors (overloading)
- *  - Aggregates related metrics into a domain object
- *  - Static utility methods still available for low-level math
+ * This version follows OOP guidelines and includes optimized
+ * coverage/deviation computations suitable for long GPX tracks.
  */
 public class TrackMetrics {
 
@@ -95,6 +93,7 @@ public class TrackMetrics {
     // ---- Static helper methods ----
 
     private static final double EARTH_RADIUS_M = 6371000.0;
+    private static final int MAX_POINTS = 5000;
 
     public static double computeTotalDistanceKm(List<TrackPoint> points) {
         if (points == null || points.size() < 2) return 0.0;
@@ -127,6 +126,10 @@ public class TrackMetrics {
         return gain;
     }
 
+    /**
+     * Approximate maximum deviation between attempt and route.
+     * Uses downsampling + sliding nearest-neighbour search (O(N)).
+     */
     public static double computeMaxDeviationMeters(List<TrackPoint> attempt,
                                                    List<TrackPoint> route) {
         if (attempt == null || attempt.isEmpty() ||
@@ -134,24 +137,32 @@ public class TrackMetrics {
             return Double.NaN;
         }
 
-        double max = 0;
-        for (TrackPoint a : attempt) {
-            double min = Double.MAX_VALUE;
+        List<TrackPoint> aList = downsample(attempt, MAX_POINTS);
+        List<TrackPoint> rList = downsample(route,   MAX_POINTS);
 
-            for (TrackPoint r : route) {
-                double d = haversineMeters(
-                        a.getLatitude(), a.getLongitude(),
-                        r.getLatitude(), r.getLongitude()
-                );
+        double max = 0.0;
+        int j = 0;
 
-                if (d < min) min = d;
+        for (TrackPoint a : aList) {
+            while (j + 1 < rList.size()
+                    && distanceMeters(rList.get(j + 1), a) <= distanceMeters(rList.get(j), a)) {
+                j++;
             }
-            if (min > max) max = min;
+
+            double d = distanceMeters(rList.get(j), a);
+            if (d > max) {
+                max = d;
+            }
         }
 
         return max;
     }
 
+    /**
+     * Coverage ratio (0.0–1.0) of attempt points that lie within
+     * toleranceMeters of some point on the route. Also uses
+     * downsampling + sliding nearest-neighbour search (O(N)).
+     */
     public static double computeCoverageRatio(List<TrackPoint> attempt,
                                               List<TrackPoint> route,
                                               double toleranceMeters) {
@@ -160,21 +171,53 @@ public class TrackMetrics {
             return 0.0;
         }
 
-        int covered = 0;
+        List<TrackPoint> aList = downsample(attempt, MAX_POINTS);
+        List<TrackPoint> rList = downsample(route,   MAX_POINTS);
 
-        for (TrackPoint a : attempt) {
-            double min = Double.MAX_VALUE;
-            for (TrackPoint r : route) {
-                double d = haversineMeters(
-                        a.getLatitude(), a.getLongitude(),
-                        r.getLatitude(), r.getLongitude()
-                );
-                if (d < min) min = d;
+        int covered = 0;
+        int total   = aList.size();
+        int j = 0;
+
+        for (TrackPoint a : aList) {
+            while (j + 1 < rList.size()
+                    && distanceMeters(rList.get(j + 1), a) <= distanceMeters(rList.get(j), a)) {
+                j++;
             }
-            if (min <= toleranceMeters) covered++;
+
+            double d = distanceMeters(rList.get(j), a);
+            if (d <= toleranceMeters) {
+                covered++;
+            }
         }
 
-        return covered / (double) attempt.size();
+        if (total == 0) return 0.0;
+        return covered / (double) total;
+    }
+
+    // ---- Low-level helpers ----
+
+    private static List<TrackPoint> downsample(List<TrackPoint> src, int maxPoints) {
+        int n = src.size();
+        if (n <= maxPoints) {
+            return src;
+        }
+        List<TrackPoint> out = new ArrayList<>(maxPoints);
+        double step = (double) n / maxPoints;
+        double idx = 0.0;
+        for (int i = 0; i < maxPoints; i++) {
+            int pos = (int) Math.round(idx);
+            if (pos >= n) pos = n - 1;
+            out.add(src.get(pos));
+            idx += step;
+        }
+        return out;
+    }
+
+    private static double distanceMeters(TrackPoint p1, TrackPoint p2) {
+        return haversineMeters(
+                p1.getLatitude(), p1.getLongitude(),
+                p2.getLatitude(), p2.getLongitude()
+        );
     }
 
     private static double haversineMeters(double lat1Deg, double lon1Deg,
