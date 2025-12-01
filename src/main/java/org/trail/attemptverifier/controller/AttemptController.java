@@ -123,28 +123,42 @@ public class AttemptController {
 
     // ------------------------------------------------------------
     // GET /api/attempts/{id}/gpx
-    // Raw GPX bytes endpoint for leaflet-gpx plugin.
+    // Raw GPX bytes endpoint for potential GPX clients.
     // ------------------------------------------------------------
     @GetMapping(value = "/{id}/gpx", produces = "application/gpx+xml")
     public ResponseEntity<byte[]> getAttemptGpx(@PathVariable("id") Long id) {
         Optional<Attempt> found = attemptRepository.findById(id);
 
         if (found.isEmpty() || found.get().getGpxData() == null) {
-            // 404 with empty body is fine; leaflet-gpx will trigger its error handler
+            // 404 with empty body is fine; client will handle it
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
         byte[] gpx = found.get().getGpxData();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_XML); // OK for GPX
+        // Using XML content type is acceptable for GPX
+        headers.setContentType(MediaType.APPLICATION_XML);
         headers.setContentLength(gpx.length);
 
         return new ResponseEntity<>(gpx, headers, HttpStatus.OK);
     }
 
     // ------------------------------------------------------------
-    // Simple error DTO
+    // DELETE /api/attempts/reset
+    // Wipes all rows from the DB (and resets AUTO_INCREMENT).
+    // Used by the "Reset" button in the UI.
+    // ------------------------------------------------------------
+    @DeleteMapping("/reset")
+    public ResponseEntity<ResetResponse> resetAttempts() {
+        int deleted = attemptRepository.resetAll();
+        return ResponseEntity.ok(
+                new ResetResponse("All attempts have been deleted.", deleted)
+        );
+    }
+
+    // ------------------------------------------------------------
+    // DTOs
     // ------------------------------------------------------------
     public static class ErrorResponse {
         private final String error;
@@ -155,6 +169,24 @@ public class AttemptController {
 
         public String getError() {
             return error;
+        }
+    }
+
+    public static class ResetResponse {
+        private final String message;
+        private final int deletedRows;
+
+        public ResetResponse(String message, int deletedRows) {
+            this.message = message;
+            this.deletedRows = deletedRows;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public int getDeletedRows() {
+            return deletedRows;
         }
     }
 }

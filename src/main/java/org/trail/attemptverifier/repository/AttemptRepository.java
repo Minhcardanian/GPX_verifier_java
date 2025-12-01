@@ -39,11 +39,11 @@ public class AttemptRepository {
             attempt.setResult(rs.getString("result"));
             attempt.setMessage(rs.getString("message"));
 
-            // NEW: load route similarity metrics
+            // Route similarity metrics
             attempt.setCoverageRatio(rs.getObject("coverage_ratio", Double.class));
             attempt.setMaxDeviationM(rs.getObject("max_deviation_m", Double.class));
 
-            // NEW: load raw GPX blob
+            // Raw GPX blob
             byte[] gpxBytes = rs.getBytes("gpx_data");
             attempt.setGpxData(gpxBytes != null ? gpxBytes : null);
 
@@ -94,7 +94,7 @@ public class AttemptRepository {
             else
                 ps.setNull(9, Types.DOUBLE);
 
-            // NEW: GPX bytes
+            // GPX bytes
             if (attempt.getGpxData() != null)
                 ps.setBytes(10, attempt.getGpxData());
             else
@@ -153,5 +153,21 @@ public class AttemptRepository {
             ORDER BY timestamp DESC
             """;
         return jdbcTemplate.query(sql, new AttemptRowMapper(), runnerId, result);
+    }
+
+    // ------------------------------------------------------------
+    // RESET (used by /api/attempts/reset)
+    // ------------------------------------------------------------
+    /**
+     * Deletes all attempts and resets AUTO_INCREMENT.
+     *
+     * @return number of rows deleted
+     */
+    public int resetAll() {
+        // Delete rows and capture how many were removed
+        int deleted = jdbcTemplate.update("DELETE FROM attempts");
+        // Reset auto-increment so IDs start from 1 again
+        jdbcTemplate.update("ALTER TABLE attempts AUTO_INCREMENT = 1");
+        return deleted;
     }
 }
