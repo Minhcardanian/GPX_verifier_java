@@ -41,7 +41,6 @@ classDiagram
 ```
 
 ## Service Composition and Strategy Use
-
 ```mermaid
 graph TD
     subgraph Controllers
@@ -83,6 +82,7 @@ graph TD
 
     RS --> GPX
     RS -->|load official route| GPX
+```
 
 
 **Key override notes**
