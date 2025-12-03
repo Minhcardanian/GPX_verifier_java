@@ -2,7 +2,6 @@
 
 mermaid
 ```
-f%% GPX Calculation Flowchart
 flowchart TD
     A[Attempt GPX bytes] --> B{Parse GPX}
     B -->|trkpt nodes| C[TrackPoint list]
