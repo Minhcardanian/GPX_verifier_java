@@ -5,19 +5,40 @@ flowchart TD
     A[Attempt GPX bytes] --> B{Parse GPX}
     B -->|trkpt nodes| C[TrackPoint list]
 
-    C --> D[TrackMetrics<br/>Total distance (km)<br/>Elevation gain (m)]
-    C --> E[Coverage calculation<br/>Downsample to 5k pts<br/>Sliding nearest neighbor<br/>Within tolerance?]
-    C --> F[Max deviation<br/>Same sliding search<br/>Record farthest distance]
+    C --> D[
+        "TrackMetrics
+        Total distance (km)
+        Elevation gain (m)"
+    ]
 
-    D --> G[Difficulty model<br/>Base workload = distance + elevation/100]
+    C --> E[
+        "Coverage calculation
+        Downsample to 5k pts
+        Sliding nearest neighbor
+        Within tolerance?"
+    ]
+
+    C --> F[
+        "Max deviation
+        Same sliding search
+        Record farthest distance"
+    ]
+
+    D --> G[
+        "Difficulty model
+        Base workload = distance + elevation/100"
+    ]
+
     E --> G
     F --> G
 
     G --> H{Classify attempt}
+
     H -->|High coverage & low deviation| I[VERIFIED]
     H -->|Partial coverage or higher deviation| J[FLAGGED]
     H -->|Low coverage or very high deviation| K[REJECTED]
 ```
+
 
 **Notes**
 - Parsing is DOM-based, extracting latitude/longitude plus optional elevation and time for each `<trkpt>`.
