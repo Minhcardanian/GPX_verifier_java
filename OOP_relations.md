@@ -55,20 +55,20 @@ graph TD
     end
 
     subgraph Strategies
-        DM["DifficultyModel<br/>(DefaultDifficultyModel)"]
-        CC["CoverageCalculator<br/>(DefaultCoverageCalculator)"]
+        DM["DifficultyModel / DefaultDifficultyModel"]
+        CC["CoverageCalculator / DefaultCoverageCalculator"]
     end
 
     subgraph Utilities
         GPX[GpxParser]
-        TM[TrackMetrics (static helpers)]
+        TM["TrackMetrics (static helpers)"]
     end
 
     subgraph Persistence
-        AR["AttemptRepository<br/>+AttemptRowMapper"]
+        AR["AttemptRepository + AttemptRowMapper"]
     end
 
-    HS["\"OK\" string"]
+    HS["OK string"]
 
     AC --> AVS
     AC --> AR
@@ -83,7 +83,7 @@ graph TD
 
     RS --> GPX
     RS -->|load official route| GPX
-```
+
 
 **Key override notes**
 - `DefaultDifficultyModel.computeScore` replaces the strategy defined by `DifficultyModel` to compute non-negative scores from distance, elevation, coverage bonus, and deviation penalty.【F:src/main/java/org/trail/attemptverifier/service/oop/DefaultDifficultyModel.java†L5-L34】
