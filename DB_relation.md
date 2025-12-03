@@ -35,7 +35,7 @@ erDiagram
 
     ATTEMPT_METRICS {
         BIGINT metric_id PK
-        BIGINT attempt_id FK UNIQUE
+        BIGINT attempt_id FK
         INT time_taken_seconds
         VARCHAR weather_conditions
         VARCHAR version_checked
@@ -44,6 +44,7 @@ erDiagram
     USERS ||--o{ ATTEMPTS : "runner_id = username"
     ROUTES ||--o{ ATTEMPTS : "route_id"
     ATTEMPTS ||--|| ATTEMPT_METRICS : "id = attempt_id"
+
 ```
 
 - **USERS → ATTEMPTS**: Each user can have multiple attempts, linked via `runner_id` to `users.username`.
