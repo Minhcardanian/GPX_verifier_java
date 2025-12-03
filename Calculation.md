@@ -1,16 +1,15 @@
 # GPX Calculation Flowchart
 
-mermaid
-```
+```mermaid
 flowchart TD
     A[Attempt GPX bytes] --> B{Parse GPX}
     B -->|trkpt nodes| C[TrackPoint list]
 
-    C --> D["TrackMetrics<br>• Total distance (km)<br>• Elevation gain (m)"]
-    C --> E["Coverage calculation<br>• Downsample to 5k pts<br>• Sliding nearest neighbor<br>• Within tolerance?"]
-    C --> F["Max deviation<br>• Same sliding search<br>• Record farthest distance"]
+    C --> D[TrackMetrics<br/>Total distance (km)<br/>Elevation gain (m)]
+    C --> E[Coverage calculation<br/>Downsample to 5k pts<br/>Sliding nearest neighbor<br/>Within tolerance?]
+    C --> F[Max deviation<br/>Same sliding search<br/>Record farthest distance]
 
-    D --> G["Difficulty model<br>Base workload = distance + elevation/100"]
+    D --> G[Difficulty model<br/>Base workload = distance + elevation/100]
     E --> G
     F --> G
 
@@ -18,7 +17,6 @@ flowchart TD
     H -->|High coverage & low deviation| I[VERIFIED]
     H -->|Partial coverage or higher deviation| J[FLAGGED]
     H -->|Low coverage or very high deviation| K[REJECTED]
-
 ```
 
 **Notes**
