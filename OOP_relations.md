@@ -1,51 +1,94 @@
-# OOP Relationships Overview
+# OOP Relationship Diagrams
 
-This document summarizes object-oriented relationships across the codebase, including inheritance/implementation, composition, and notable overridden methods.
+The diagrams below visualize the main inheritance, implementation, and composition links across the codebase, highlighting overridden methods where they occur.
 
 ## Interfaces and Implementations
 
-- `org.trail.attemptverifier.service.oop.DifficultyModel` (interface)
-  - Contract: `computeScore(distanceKm, elevationGainM, coverageRatio, maxDeviationM)`.
-  - Implemented by `DefaultDifficultyModel`, which overrides `computeScore` to combine distance, elevation, coverage bonus, and deviation penalty into a non-negative score.【F:src/main/java/org/trail/attemptverifier/service/oop/DifficultyModel.java†L5-L23】【F:src/main/java/org/trail/attemptverifier/service/oop/DefaultDifficultyModel.java†L5-L34】
+```mermaid
+classDiagram
+    class DifficultyModel {
+        <<interface>>
+        +computeScore(distanceKm, elevationGainM, coverageRatio, maxDeviationM)
+    }
+    class DefaultDifficultyModel {
+        +computeScore(distanceKm, elevationGainM, coverageRatio, maxDeviationM)
+        <<overrides DifficultyModel>>
+    }
+    DifficultyModel <|.. DefaultDifficultyModel
 
-- `org.trail.attemptverifier.service.oop.CoverageCalculator` (interface)
-  - Contract: `computeCoverage(attemptTrack, routeTrack, toleranceM)` returning a 0–1 coverage ratio.
-  - Implemented by `DefaultCoverageCalculator`, which overrides `computeCoverage` with a downsampling strategy and sliding nearest-neighbour search; helper methods `downsample`, `distanceMeters`, and `haversineMeters` are encapsulated within the class.【F:src/main/java/org/trail/attemptverifier/service/oop/CoverageCalculator.java†L5-L24】【F:src/main/java/org/trail/attemptverifier/service/oop/DefaultCoverageCalculator.java†L5-L88】
+    class CoverageCalculator {
+        <<interface>>
+        +computeCoverage(attemptTrack, routeTrack, toleranceM)
+    }
+    class DefaultCoverageCalculator {
+        +computeCoverage(attemptTrack, routeTrack, toleranceM)
+        -downsample(points, maxCount)
+        -distanceMeters(a, b)
+        -haversineMeters(lat1, lon1, lat2, lon2)
+        <<overrides CoverageCalculator>>
+    }
+    CoverageCalculator <|.. DefaultCoverageCalculator
 
-- `org.springframework.jdbc.core.RowMapper<Attempt>` (interface from Spring)
-  - Implemented by the private static inner class `AttemptRepository.AttemptRowMapper`, which overrides `mapRow` to hydrate `Attempt` domain objects from JDBC result sets, including optional Double and BLOB fields.【F:src/main/java/org/trail/attemptverifier/repository/AttemptRepository.java†L20-L54】
+    class RowMapper~Attempt~ {
+        <<interface>>
+        +mapRow(ResultSet, rowNum)
+    }
+    class AttemptRowMapper {
+        +mapRow(ResultSet, rowNum)
+        <<overrides RowMapper>>
+    }
+    RowMapper <|.. AttemptRowMapper
+```
 
-## Service Layer Composition
+## Service Composition and Strategy Use
 
-- `AttemptVerifierService`
-  - Composes repository (`AttemptRepository`), utility parser (`GpxParser`), and route loader (`RouteService`).【F:src/main/java/org/trail/attemptverifier/service/AttemptVerifierService.java†L28-L43】
-  - Encapsulates strategy objects through interface references (`DifficultyModel difficultyModel = new DefaultDifficultyModel()`, `CoverageCalculator coverageCalculator = new DefaultCoverageCalculator()`), demonstrating polymorphism and the ability to swap implementations.【F:src/main/java/org/trail/attemptverifier/service/AttemptVerifierService.java†L31-L38】
-  - Coordinates the verification workflow (`verifyAttempt`), delegating metrics to `TrackMetrics` static helpers and strategy interfaces; constructs and persists `Attempt` instances, illustrating composition over inheritance.【F:src/main/java/org/trail/attemptverifier/service/AttemptVerifierService.java†L47-L142】
-  - Uses `buildRejectedAttempt` as a factory-style helper to standardize failure cases and persist them via the repository.【F:src/main/java/org/trail/attemptverifier/service/AttemptVerifierService.java†L144-L173】
+```mermaid
+graph TD
+    subgraph Controllers
+        AC[AttemptController]
+        HC[HealthController]
+    end
 
-- `RouteService`
-  - Composes `GpxParser` and `ResourceLoader` to lazily load and cache the official route GPX; exposes `getTrackPoints` for downstream services.【F:src/main/java/org/trail/attemptverifier/service/RouteService.java†L5-L45】
+    subgraph Services
+        AVS[AttemptVerifierService]
+        RS[RouteService]
+    end
 
-## Controller Layer Dependencies
+    subgraph Strategies
+        DM[DifficultyModel\n(DefaultDifficultyModel)]
+        CC[CoverageCalculator\n(DefaultCoverageCalculator)]
+    end
 
-- `AttemptController`
-  - Depends on `AttemptVerifierService` for business logic and `AttemptRepository` for direct data queries; endpoints return domain models or DTOs. Nested DTO classes (`ErrorResponse`, `ResetResponse`) encapsulate simple data without inheritance.【F:src/main/java/org/trail/attemptverifier/controller/AttemptController.java†L17-L45】【F:src/main/java/org/trail/attemptverifier/controller/AttemptController.java†L124-L190】
+    subgraph Utilities
+        GPX[GpxParser]
+        TM[TrackMetrics (static helpers)]
+    end
 
-- `HealthController`
-  - Simple REST controller with a single endpoint returning a health string; no inheritance beyond Spring’s annotations.【F:src/main/java/org/trail/attemptverifier/controller/HealthController.java†L1-L13】
+    subgraph Persistence
+        AR[AttemptRepository\n+AttemptRowMapper]
+    end
 
-## Domain and Utility Classes
+    AC --> AVS
+    AC --> AR
+    HC --> HS[("OK" string)]
 
-- `Attempt` and `TrackPoint`
-  - Plain POJOs with state and accessor methods; they do not extend or implement custom interfaces but serve as domain entities composed within services, controllers, and repositories.【F:src/main/java/org/trail/attemptverifier/model/Attempt.java†L5-L118】【F:src/main/java/org/trail/attemptverifier/model/TrackPoint.java†L5-L40】
+    AVS --> AR
+    AVS --> RS
+    AVS --> GPX
+    AVS --> TM
+    AVS --> DM
+    AVS --> CC
 
-- `TrackMetrics`
-  - Utility class combining instance fields with static factory/helper methods. Although not implementing an interface, it demonstrates encapsulation of metric calculations (distance, elevation gain, coverage ratio, max deviation) used by services.【F:src/main/java/org/trail/attemptverifier/util/TrackMetrics.java†L5-L118】
+    RS --> GPX
+    RS -->|load official route| GPX
+```
 
-- `GpxParser`
-  - Spring component encapsulating DOM-based GPX parsing logic to produce `TrackPoint` objects, isolating parsing concerns from services.【F:src/main/java/org/trail/attemptverifier/util/GpxParser.java†L5-L74】
+**Key override notes**
+- `DefaultDifficultyModel.computeScore` replaces the strategy defined by `DifficultyModel` to compute non-negative scores from distance, elevation, coverage bonus, and deviation penalty.【F:src/main/java/org/trail/attemptverifier/service/oop/DefaultDifficultyModel.java†L5-L34】
+- `DefaultCoverageCalculator.computeCoverage` implements the downsampling nearest-neighbour approach defined by `CoverageCalculator`, using private helpers for distance math.【F:src/main/java/org/trail/attemptverifier/service/oop/DefaultCoverageCalculator.java†L5-L88】
+- `AttemptRepository.AttemptRowMapper.mapRow` overrides Spring's `RowMapper` to hydrate `Attempt` entities including optional doubles and BLOB notes.【F:src/main/java/org/trail/attemptverifier/repository/AttemptRepository.java†L20-L54】
 
-## Application Entry Point
-
-- `AttemptVerifierApplication`
-  - Annotated with `@SpringBootApplication`; provides the static `main` entry point to bootstrap the Spring context. No inheritance or overrides beyond `SpringApplication.run` call.【F:src/main/java/org/trail/attemptverifier/AttemptVerifierApplication.java†L1-L11】
+**Composition highlights**
+- `AttemptVerifierService` coordinates repository, route loading, GPX parsing, static `TrackMetrics`, and swappable strategy objects (`DifficultyModel`, `CoverageCalculator`).【F:src/main/java/org/trail/attemptverifier/service/AttemptVerifierService.java†L28-L173】
+- `RouteService` caches the official route GPX using `GpxParser` and Spring's `ResourceLoader` for downstream consumers.【F:src/main/java/org/trail/attemptverifier/service/RouteService.java†L5-L45】
+- `AttemptController` depends on `AttemptVerifierService` for verification and `AttemptRepository` for querying attempts; DTOs remain simple data holders without inheritance.【F:src/main/java/org/trail/attemptverifier/controller/AttemptController.java†L17-L190】
