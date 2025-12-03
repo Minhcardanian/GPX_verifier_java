@@ -55,8 +55,8 @@ graph TD
     end
 
     subgraph Strategies
-        DM[DifficultyModel\n(DefaultDifficultyModel)]
-        CC[CoverageCalculator\n(DefaultCoverageCalculator)]
+        DM["DifficultyModel<br/>(DefaultDifficultyModel)"]
+        CC["CoverageCalculator<br/>(DefaultCoverageCalculator)"]
     end
 
     subgraph Utilities
@@ -65,12 +65,14 @@ graph TD
     end
 
     subgraph Persistence
-        AR[AttemptRepository\n+AttemptRowMapper]
+        AR["AttemptRepository<br/>+AttemptRowMapper"]
     end
+
+    HS["\"OK\" string"]
 
     AC --> AVS
     AC --> AR
-    HC --> HS[("OK" string)]
+    HC --> HS
 
     AVS --> AR
     AVS --> RS
